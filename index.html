@@ -30,6 +30,8 @@ window.RECAPTCHA_KEY="6Lf_NwMuAAAAAA_p2tcPY1hQxnUbJRTxAHpMKSsm";
 [hidden]{display:none!important}
 html,body{height:100%;margin:0}
 body{font-family:var(--f);color:var(--ink);background:#e9ecf0;-webkit-tap-highlight-color:transparent}
+html,body{overflow-x:hidden}
+.ed>*{min-width:0}
 button,input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .app{display:grid;grid-template-columns:440px 1fr;grid-template-rows:auto 1fr;height:100%}
 .bar{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:10px max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left));background:var(--ink);color:#fff;padding-top:calc(10px + env(safe-area-inset-top))}
@@ -124,9 +126,14 @@ button,input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
   .app{grid-template-columns:1fr;grid-template-rows:auto 1fr auto}
   .bar{padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:8px}
   .bar .desk{display:none}
-  .bar h1 small{display:none}
-  .wk-nav{flex:1;justify-content:space-between}
-  .wbtn{padding:10px 12px;font-size:15px}
+  .bar h1,.bar .sp{display:none}
+  .bar{gap:8px}
+  .app{grid-template-columns:minmax(0,1fr)}
+  .wk-nav{flex:1;min-width:0;justify-content:space-between}
+  .wlbl{min-width:0;flex:1}
+  .wlbl b,.wlbl small{overflow:hidden;text-overflow:ellipsis}
+  .wbtn{padding:10px 11px;font-size:15px;flex:none}
+  .ubtn{flex:none}
   .ed,.pv{grid-row:2;grid-column:1;border:0}
   .pv{padding:12px max(12px,env(safe-area-inset-right)) 12px max(12px,env(safe-area-inset-left))}
   .ed{padding:12px max(12px,env(safe-area-inset-right)) 24px max(12px,env(safe-area-inset-left))}
@@ -215,6 +222,22 @@ body.modal-open{overflow:hidden}
 .mnum{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink2)}
 .mact{display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:-16px;background:#fff;padding:10px 0 2px}
 @media (max-width:860px){.ubtn{padding:8px 9px;font-size:12px}}
+
+.pform{display:grid;gap:12px}
+.pfTpl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pfTpl label{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:3px;cursor:pointer;position:relative}
+.pfTpl label:has(input:checked){border-color:var(--acc);background:#fdf3ec}
+.pfTpl input{position:absolute;opacity:0;pointer-events:none}
+.pfTpl small{font-size:12px;color:var(--mute)}
+.pfLogo{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pfLogo img{width:52px;height:52px;object-fit:contain;border:1px solid var(--line);border-radius:10px;background:#fff}
+.pfLogo select{border:1px solid var(--line);border-radius:8px;padding:7px 8px;min-width:0}
+.pform.isB .pfA{display:none}
+.pmrow{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.pmrow i{width:10px;height:10px;border-radius:50%;flex:none}
+.pmrow b{flex:1;min-width:0}
+.pmrow small{color:var(--mute);font-size:12px}
+#pmList{display:grid;gap:8px}
 
 /* ============ 인쇄 ============ */
 @media print{
@@ -596,15 +619,16 @@ body.modal-open{overflow:hidden}
     <div class="gview" id="gLogin">
       <div class="gtabs"><button type="button" class="on" data-gt="login">로그인</button><button type="button" data-gt="signup">회원가입</button></div>
       <form id="fLogin" class="gform">
-        <label class="fld"><span>이메일</span><input id="liEmail" type="email" autocomplete="email" required></label>
+        <label class="fld"><span>이름</span><input id="liEmail" type="text" autocomplete="username" autocapitalize="off" required></label>
         <label class="fld"><span>비밀번호</span><input id="liPw" type="password" autocomplete="current-password" required></label>
         <button class="btn pri gbig" type="submit">로그인</button>
-        <button class="glink" type="button" id="bForgot">비밀번호를 잊었어요</button>
+        <p class="hint" style="text-align:center;margin:0">비밀번호를 잊었으면 관리자에게 말해 주세요.</p>
+        <button class="glink" type="button" id="bForgot" hidden>비밀번호를 잊었어요</button>
       </form>
       <form id="fSignup" class="gform" hidden>
-        <label class="fld"><span>이름</span><input id="suName" type="text" autocomplete="name" required></label>
-        <label class="fld"><span>이메일</span><input id="suEmail" type="email" autocomplete="email" required></label>
+        <label class="fld"><span>이름 (로그인할 때 씁니다)</span><input id="suName" type="text" autocomplete="username" autocapitalize="off" required></label>
         <label class="fld"><span>비밀번호 (6자 이상)</span><input id="suPw" type="password" autocomplete="new-password" minlength="6" required></label>
+        <label class="fld"><span>비밀번호 확인</span><input id="suPw2" type="password" autocomplete="new-password" minlength="6" required></label>
         <button class="btn pri gbig" type="submit">가입 신청</button>
         <p class="hint">가입 후 관리자가 승인하면 사용할 수 있어요.</p>
       </form>
@@ -628,6 +652,30 @@ body.modal-open{overflow:hidden}
   </div>
 </div>
 
+<!-- ===== 기관 양식 ===== -->
+<div class="modal" id="mPreset" hidden>
+  <div class="mcard">
+    <div class="mhd"><b id="pfTitle">기관 양식 추가</b><button type="button" class="ibtn" data-close aria-label="닫기">✕</button></div>
+    <form id="pf" class="pform">
+      <label class="fld"><span>기관 이름 (목록에 보이는 이름)</span><input id="pfShort" type="text" required placeholder="예: 성남 은혜교회"></label>
+      <div class="fld"><span>리포트 모양</span>
+        <div class="pfTpl"><label><input type="radio" name="pfTpl" value="A" checked><b>웜 · 학부모 안내형</b><small>꿈을 이루는 교회, 더리즌 같은 모양</small></label>
+        <label><input type="radio" name="pfTpl" value="B"><b>블루 · 대시보드형</b><small>IEC, CSC 블루 같은 모양</small></label></div></div>
+      <div class="row"><label class="fld"><span>머리 제목</span><input id="pfOrgTitle" type="text" placeholder="비우면 기관 이름"></label>
+        <label class="fld"><span>부제</span><input id="pfOrgSub" type="text" placeholder="예: GIS 주간 학습 리포트"></label></div>
+      <div class="row pfA"><label class="fld"><span>하단 굵은 글씨</span><input id="pfFootBold" type="text" placeholder="비우면 머리 제목"></label>
+        <label class="fld"><span>하단 얇은 글씨</span><input id="pfFootLight" type="text" placeholder="예: · GIS 주간 학습 리포트"></label></div>
+      <div class="fld"><span>로고</span>
+        <div class="pfLogo"><img id="pfLogoImg" alt="로고 미리보기"><label class="btn line sm" for="pfLogoFile">이미지 고르기</label><input id="pfLogoFile" type="file" accept="image/*" hidden>
+          <select id="pfLogoPick" aria-label="기존 로고 쓰기"><option value="">기존 로고 쓰기…</option><option value="gis">GIS KOREA 로고</option><option value="csct">CSC 로고 (투명)</option><option value="cscbg">CSC 로고 (배경)</option><option value="iec">IEC 글자 로고</option></select></div></div>
+      <label class="fld pfA" style="grid-template-columns:auto 1fr;align-items:center;gap:8px"><input id="pfTile" type="checkbox" checked style="width:auto"><span>로고를 흰 둥근 칸 안에 넣기</span></label>
+      <label class="fld pfA" style="grid-template-columns:auto 1fr;align-items:center;gap:8px"><input id="pfPct" type="checkbox" checked style="width:auto"><span>학습시간 옆에 (%) 표시</span></label>
+      <label class="fld"><span>목록 색</span><input id="pfDot" type="color" value="#2f8f6a" style="height:38px"></label>
+      <div class="mact"><button type="button" class="btn line" id="pfDel" hidden style="color:var(--danger)">이 양식 삭제</button><span style="flex:1"></span><button type="submit" class="btn pri">저장</button></div>
+    </form>
+    <div id="pmList" hidden></div>
+  </div>
+</div>
 <!-- ===== 메모 사진 인식 ===== -->
 <div class="modal" id="mMemo" hidden>
   <div class="mcard wide">
@@ -661,6 +709,20 @@ const PRESETS={
   "iec":{short:"IEC",dot:"#13294b",label:"IEC · Integrity Education Consulting (블루)",tpl:"B",logo:"iec",orgTitle:"IEC",orgSub:"Integrity Education Consulting"},
   "csc-blue":{short:"CSC 블루",dot:"#2f6fd0",label:"CSC · 캐릭터셀프코칭 (블루)",tpl:"B",logo:"cscbg",orgTitle:"CSC",orgSub:"캐릭터셀프코칭"}
 };
+const P=k=>PRESETS[k]||PRESETS["gis-dream"];
+const BUILTIN=new Set(Object.keys(PRESETS));
+const PKEY="weekly-report-presets-v1";
+function applyCustomPresets(obj){
+  for(const k of Object.keys(PRESETS))if(!BUILTIN.has(k))delete PRESETS[k];
+  Object.entries(obj||{}).forEach(([k,v])=>{if(!BUILTIN.has(k))PRESETS[k]=v});
+}
+try{if(!window.FIREBASE_CONFIG)applyCustomPresets(JSON.parse(localStorage.getItem(PKEY)||"{}"))}catch(e){}
+function customPresets(){const o={};Object.keys(PRESETS).forEach(k=>{if(!BUILTIN.has(k))o[k]=PRESETS[k]});return o}
+async function savePresets(){
+  const o=customPresets();
+  if(window.FIREBASE_CONFIG&&window.cloudSavePresets){await window.cloudSavePresets(o)}
+  else{try{localStorage.setItem(PKEY,JSON.stringify(o))}catch(e){toast("저장 공간이 부족해요")}}
+}
 const COLORS={"국어":"#f4a031","수학":"#7b4fd8","영어":"#1ba8a8","사회":"#2563eb","과학":"#e8521e","지리":"#1f6fd8","사문":"#8a55b8","한국사":"#3b9c5a"};
 const sub=(o)=>Object.assign({name:"",full:"",color:"#2563eb",hDone:"",hPlan:"",hPct:"",cDone:"",cPlan:"",daily:"",dailyH:"",task:"",prog:"",rep:"",amount:"",next:""},o);
 
@@ -713,7 +775,7 @@ function seed(){
   ].map(s=>fill(s));
 }
 function fill(s){
-  const p=PRESETS[s.preset]||PRESETS["gis-dream"];
+  const p=P(s.preset)||PRESETS["gis-dream"];
   const d={name:"",week:"",date:"",month:"",nextWeek:"",qt:"큐티 매일 완료",att:"정시 출석",completion:"",total:"",showPct:p.showPct??true,comments:"",
     dailyPlan:"",kpiTask:"",ddayLabel:"",ddayValue:"",qtTile:"",qtTitle:"",qtLines:"",cond:3,focus:3,satis:3,feeling:"",days:"",progTitle:"교과 대비 누적 진도율",progNotes:"",progD:"",wrong:"",coach:"",barMax:"",
     orgTitle:p.orgTitle,orgSub:p.orgSub,footBold:p.footBold||"",footLight:p.footLight||"",logo:"",subjects:[]};
@@ -753,7 +815,7 @@ const fmt=n=>{n=Math.round(n*10)/10;return String(n)};
 const lines=t=>String(t||"").split("\n").map(x=>x.trim()).filter(Boolean);
 const pct=(a,b)=>b>0?Math.round(a/b*100):0;
 function toast(m,act,fn){const t=$("toast");t.textContent=m;if(act){const b=document.createElement("button");b.type="button";b.textContent=act;b.onclick=()=>{fn();t.classList.remove("on")};t.appendChild(b)}t.classList.add("on");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),act?4000:1800)}
-function logoSrc(s){const p=PRESETS[s.preset];if(s.logo)return s.logo;return p.logo==="iec"?"":LOGO[p.logo]}
+function logoSrc(s){const p=P(s.preset);if(s.logo)return s.logo;if(p.logoData)return p.logoData;return p.logo==="iec"?"":LOGO[p.logo]}
 
 /* ---------- 렌더 공통: 편집 버튼 (ed=true 일 때만, 이미지엔 안 나옴) ---------- */
 const ADDLBL={subj:"과목",eval:"항목",day:"요일",wrong:"오답",qt:"내용",cmt:"코멘트",amount:"내용",next:"계획"};
@@ -768,7 +830,7 @@ function C(ed){return{
 /* ---------- 렌더: 템플릿 A ---------- */
 function renderA(s,ed){
   const {RM,ADD,F,EV,TX}=C(ed);
-  const p=PRESETS[s.preset],S=s.subjects;
+  const p=P(s.preset),S=s.subjects;
   const sumPlan=S.reduce((a,x)=>a+num(x.hPlan),0);
   const cd=S.reduce((a,x)=>a+num(x.cDone),0),cp=S.reduce((a,x)=>a+num(x.cPlan),0);
   const comp=Math.max(0,Math.min(100,has(s.completion)?num(s.completion):pct(cd,cp)));
@@ -812,7 +874,7 @@ function renderA(s,ed){
 /* ---------- 렌더: 템플릿 B ---------- */
 function renderB(s,ed){
   const {RM,ADD,F,EV,TX}=C(ed);
-  const p=PRESETS[s.preset],S=s.subjects;
+  const p=P(s.preset),S=s.subjects;
   const src=logoSrc(s);
   const kpiTask=has(s.kpiTask)?num(s.kpiTask):(S.length?Math.round(S.reduce((a,x)=>a+num(x.task),0)/S.length):0);
   const showD=!!s.ddayLabel;
@@ -862,7 +924,7 @@ function renderB(s,ed){
   ${s.coach||ed?`<div class="cc"><b>코치 코멘트</b><span>${TX("f.coach",esc(s.coach)||"코치 코멘트 입력")}</span></div>`:""}
 </div>`;
 }
-const renderReport=(s,ed)=>PRESETS[s.preset].tpl==="A"?renderA(s,ed):renderB(s,ed);
+const renderReport=(s,ed)=>P(s.preset).tpl==="A"?renderA(s,ed):renderB(s,ed);
 
 /* ---------- 미리보기 맞춤 ---------- */
 function fit(){
@@ -881,7 +943,10 @@ if(document.fonts)document.fonts.ready.then(fit);
 
 /* ---------- 편집기 ---------- */
 function buildPresetSelect(){
-  $("preset").innerHTML=Object.entries(PRESETS).map(([k,v])=>`<option value="${k}">${esc(v.label)}</option>`).join("");
+  const opts=Object.entries(PRESETS).map(([k,v])=>`<option value="${k}">${esc(v.label)}</option>`).join("");
+  $("preset").innerHTML=opts+`<option value="__new">+ 새 기관 양식 추가…</option><option value="__manage">기관 양식 관리…</option>`;
+  if($("bulkPreset"))$("bulkPreset").innerHTML=opts;
+  if(db&&cur())$("preset").value=cur().preset;
 }
 let stuFilter="all",stuQuery="";
 function buildStudents(){
@@ -914,7 +979,7 @@ function subRow(x,i,tpl){
     ${tpl==="A"?A:B}</div>`;
 }
 function buildEditor(){
-  const s=cur(),p=PRESETS[s.preset];
+  const s=cur(),p=P(s.preset);
   document.body.classList.toggle("tplA",p.tpl==="A");document.body.classList.toggle("tplB",p.tpl==="B");
   buildStudents();
   $("preset").value=s.preset;
@@ -925,6 +990,7 @@ function buildEditor(){
   draw();
 }
 document.addEventListener("input",e=>{
+  if(!db||!e.target.closest||!e.target.closest("#ed"))return;
   const t=e.target,s=cur();
   if(t.dataset.k){s[t.dataset.k]=t.value;if(t.dataset.k==="name")buildStudents()}
   else if(t.dataset.sk){const x=s.subjects[+t.dataset.si];x[t.dataset.sk]=t.value;
@@ -934,7 +1000,9 @@ document.addEventListener("input",e=>{
 });
 $("f_showPct").addEventListener("change",e=>{cur().showPct=e.target.checked;save();draw()});
 $("preset").addEventListener("change",e=>{
-  const s=cur(),np=PRESETS[e.target.value];s.preset=e.target.value;
+  if(e.target.value==="__new"){e.target.value=cur().preset;openPresetEditor();return}
+  if(e.target.value==="__manage"){e.target.value=cur().preset;openPresetManager();return}
+  const s=cur(),np=P(e.target.value);s.preset=e.target.value;
   s.orgTitle=np.orgTitle;s.orgSub=np.orgSub;s.footBold=np.footBold||"";s.footLight=np.footLight||"";s.logo="";
   if(np.showPct!==undefined)s.showPct=np.showPct;
   save();buildEditor();
@@ -961,12 +1029,12 @@ $("bBulkCancel").onclick=()=>{$("bulkBox").hidden=true};
 $("bBulkGo").onclick=()=>{
   const names=$("bulkNames").value.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
   if(!names.length){toast("이름을 입력해 주세요");return}
-  const pk=$("bulkPreset").value,p=PRESETS[pk],c=cur(),same=PRESETS[c.preset].tpl===p.tpl,copy=$("bulkCopy").checked&&same;
+  const pk=$("bulkPreset").value,p=P(pk),c=cur(),same=P(c.preset).tpl===p.tpl,copy=$("bulkCopy").checked&&same;
   const have=new Set(db.list.filter(s=>s.preset===pk).map(s=>s.name));let added=0,skip=0,first=null;
   for(const n of names){
     if(have.has(n)){skip++;continue}
     const subs=copy?c.subjects.map(x=>sub({name:x.name,full:x.full,color:x.color,hPlan:x.hPlan,cPlan:x.cPlan,daily:x.daily,dailyH:x.dailyH})):DEF_SUBS[p.tpl].map(([n2,col])=>sub({name:n2,color:col||COLORS[n2]||"#2563eb"}));
-    const s=fill({id:uid(),preset:pk,name:n,week:c.week,date:c.date,month:c.month,nextWeek:c.nextWeek,subjects:subs});
+    const wd=weekDefaults(db.list,pk);const s=fill({id:uid(),preset:pk,name:n,week:wd.week,date:wd.date,month:wd.month,nextWeek:wd.nextWeek,subjects:subs});
     db.list.push(s);have.add(n);added++;if(!first)first=s.id;
   }
   if(first)db.cur=first;
@@ -975,7 +1043,7 @@ $("bBulkGo").onclick=()=>{
 };
 const uid=()=>"s"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 $("bNew").onclick=()=>{
-  const c=cur();const s=fill({id:uid(),preset:c.preset,name:"새 학생",week:c.week,date:c.date,month:c.month,nextWeek:c.nextWeek,
+  const c=cur();const wd=weekDefaults(db.list,c.preset);const s=fill({id:uid(),preset:c.preset,name:"새 학생",week:c.week||wd.week,date:c.date||wd.date,month:c.month||wd.month,nextWeek:c.nextWeek||wd.nextWeek,
     orgTitle:c.orgTitle,orgSub:c.orgSub,footBold:c.footBold,footLight:c.footLight,logo:c.logo,showPct:c.showPct,
     subjects:c.subjects.map(x=>sub({name:x.name,full:x.full,color:x.color,hPlan:x.hPlan,cPlan:x.cPlan,daily:x.daily,dailyH:x.dailyH}))});
   db.list.push(s);db.cur=s.id;save();buildEditor();$("f_name").select();
@@ -1021,6 +1089,18 @@ function advance(s){
   s.days=lines(s.days).map(l=>l.split(/\s+/)[0]+" 0").join("\n");
   return s;
 }
+function mondayOf(d){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+function todayWeek(){const mon=mondayOf(new Date()),L=labelOf(mon),t=new Date();return{week:`${L.m}월 ${ORD[L.ord-1]} 주`,date:`${t.getFullYear()}.${pad(t.getMonth()+1)}.${pad(t.getDate())}`,month:`${L.y}.${pad(L.m)}`,nextWeek:nextLabel(`${L.m}월 ${ORD[L.ord-1]} 주`,L.y).text}}
+const mode=a=>{const c={};a.filter(Boolean).forEach(v=>c[v]=(c[v]||0)+1);return Object.keys(c).sort((x,y)=>c[y]-c[x])[0]||""};
+function weekDefaults(list,preset){
+  const same=list.filter(s=>s.preset===preset),tw=todayWeek(),tpl=P(preset).tpl,sameTpl=list.filter(s=>P(s.preset).tpl===tpl);
+  return{week:mode(same.map(s=>s.week))||mode(list.map(s=>s.week))||tw.week,
+    date:mode(same.map(s=>s.date))||mode(sameTpl.map(s=>s.date))||tw.date,
+    month:mode(same.map(s=>s.month))||mode(sameTpl.map(s=>s.month))||tw.month,
+    nextWeek:mode(same.map(s=>s.nextWeek))||mode(sameTpl.map(s=>s.nextWeek))||""}
+}
+function fillBlankWeek(list){list.forEach(s=>{const d=weekDefaults(list.filter(x=>x!==s),s.preset);const A=P(s.preset).tpl==="A";
+  if(!s.week)s.week=d.week;if(A&&!s.date)s.date=d.date;if(!A&&!s.month)s.month=d.month;if(!A&&!s.nextWeek)s.nextWeek=d.nextWeek||nextLabel(s.week,yearOf(s)).text})}
 function weekLabel(w){const c={};w.list.forEach(s=>{if(s.week)c[s.week]=(c[s.week]||0)+1});const k=Object.keys(c).sort((a,b)=>c[b]-c[a])[0];return k||"주차"}
 function drawWeekNav(){
   const w=db.weeks[db.wi];
@@ -1040,13 +1120,14 @@ $("wNext").onclick=()=>{
   const nx=$("wNext");
   if(db.wi<db.weeks.length-1){gotoWeek(db.wi+1);return}
   if(!nx.dataset.arm){nx.dataset.arm=1;nx.classList.add("arm");nx.textContent="새 주차 만들기?";clearTimeout(nx._t);nx._t=setTimeout(drawWeekNav,3000);return}
-  const list=JSON.parse(JSON.stringify(db.list)).map(fill).map(advance);
+  const base=JSON.parse(JSON.stringify(db.list)).map(fill);fillBlankWeek(base);
+  const list=base.map(advance);
   db.weeks.push({list});gotoWeek(db.weeks.length-1);
   toast(`${weekLabel(db.weeks[db.wi])}로 넘어갔어요 · 지난 주는 ◀로 볼 수 있어요`);
 };
 $("bAll").onclick=()=>{
-  const c=cur(),t=PRESETS[c.preset].tpl;let n=0;
-  db.list.forEach(s=>{if(PRESETS[s.preset].tpl===t){s.week=c.week;s.date=c.date;s.month=c.month;s.nextWeek=c.nextWeek;n++}});
+  const c=cur(),t=P(c.preset).tpl;let n=0;
+  db.list.forEach(s=>{if(P(s.preset).tpl===t){s.week=c.week;s.date=c.date;s.month=c.month;s.nextWeek=c.nextWeek;n++}});
   save();toast(`같은 양식 ${n}명에게 주차·날짜 적용`);
 };
 $("logoFile").addEventListener("change",e=>{
@@ -1235,6 +1316,55 @@ $("bUsers").onclick=()=>openModal("mUsers");
 $("bLogout").onclick=()=>{if(window.cloudSignOut)window.cloudSignOut();else toast("로그인 기능이 켜져 있지 않아요")};
 window.toast=toast;
 
+/* ---------- 기관 양식 추가 · 관리 ---------- */
+let pfEdit=null,pfLogo="",pfLogoKey="";
+function pfSyncTpl(){$("pf").classList.toggle("isB",document.querySelector('input[name=pfTpl]:checked').value==="B")}
+document.querySelectorAll('input[name=pfTpl]').forEach(r=>r.addEventListener("change",pfSyncTpl));
+function pfShowLogo(){const src=pfLogo||(pfLogoKey&&pfLogoKey!=="iec"?LOGO[pfLogoKey]:"");$("pfLogoImg").src=src||"data:image/svg+xml;utf8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52"><rect width="52" height="52" fill="#f1f3f6"/><text x="26" y="31" font-size="11" fill="#8a94a3" text-anchor="middle" font-family="sans-serif">'+(pfLogoKey==="iec"?"IEC":"로고")+'</text></svg>')}
+function openPresetEditor(key){
+  pfEdit=key||null;const p=key?PRESETS[key]:{tpl:cur()?P(cur().preset).tpl:"A",tile:true,showPct:true,dot:"#2f8f6a"};
+  $("pfTitle").textContent=key?"기관 양식 수정":"기관 양식 추가";
+  $("pfShort").value=p.short||"";$("pfOrgTitle").value=p.orgTitle||"";$("pfOrgSub").value=p.orgSub||"";
+  $("pfFootBold").value=p.footBold||"";$("pfFootLight").value=p.footLight||"";$("pfTile").checked=p.tile!==false;$("pfPct").checked=p.showPct!==false;$("pfDot").value=p.dot||"#2f8f6a";
+  document.querySelector(`input[name=pfTpl][value=${p.tpl||"A"}]`).checked=true;pfSyncTpl();
+  pfLogo=p.logoData||"";pfLogoKey=p.logoData?"":(p.logo||"");$("pfLogoPick").value="";pfShowLogo();
+  $("pfDel").hidden=!key;$("pf").hidden=false;$("pmList").hidden=true;openModal("mPreset");
+  setTimeout(()=>{if(window.innerWidth>860)$("pfShort").focus()},50);
+}
+function openPresetManager(){
+  const C=customPresets();$("pfTitle").textContent="기관 양식 관리";$("pf").hidden=true;$("pmList").hidden=false;
+  const builtin=[...BUILTIN].map(k=>`<div class="pmrow"><i style="background:${PRESETS[k].dot}"></i><b>${esc(PRESETS[k].short)}</b><small>기본 양식</small></div>`).join("");
+  $("pmList").innerHTML=Object.entries(C).map(([k,p])=>`<div class="pmrow"><i style="background:${esc(p.dot)}"></i><b>${esc(p.short)}</b><small>${p.tpl==="A"?"웜":"블루"}</small><button type="button" class="btn line sm" data-pe="${k}">수정</button></div>`).join("")
+    +`<button type="button" class="btn pri" id="pmAdd" style="justify-content:center">+ 새 기관 양식 추가</button>`+builtin;
+  openModal("mPreset");
+}
+$("pmList").addEventListener("click",e=>{const b=e.target.closest("[data-pe]");if(b)openPresetEditor(b.dataset.pe);if(e.target.closest("#pmAdd"))openPresetEditor()});
+$("pfLogoPick").addEventListener("change",e=>{if(!e.target.value)return;pfLogoKey=e.target.value;pfLogo="";pfShowLogo()});
+$("pfLogoFile").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{const img=new Image();img.onload=()=>{const m=240,sc=Math.min(1,m/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext("2d").drawImage(img,0,0,c.width,c.height);pfLogo=c.toDataURL("image/png");pfLogoKey="";pfShowLogo()};img.src=r.result};r.readAsDataURL(f);e.target.value=""});
+$("pf").addEventListener("submit",async e=>{e.preventDefault();
+  const tpl=document.querySelector('input[name=pfTpl]:checked').value,short=$("pfShort").value.trim();if(!short)return;
+  const key=pfEdit||("c"+Date.now().toString(36));
+  const orgTitle=$("pfOrgTitle").value.trim()||short,orgSub=$("pfOrgSub").value.trim();
+  const p={short,dot:$("pfDot").value,label:`${short} (${tpl==="A"?"웜":"블루"})`,tpl,orgTitle,orgSub,
+    footBold:tpl==="A"?($("pfFootBold").value.trim()||orgTitle):"",footLight:tpl==="A"?$("pfFootLight").value.trim():"",
+    tile:$("pfTile").checked,showPct:$("pfPct").checked,
+    logo:pfLogo?"custom":(pfLogoKey||(tpl==="B"?"iec":"")),logoData:pfLogo||""};
+  if(tpl==="A")p.sep=": ";
+  PRESETS[key]=p;
+  try{await savePresets()}catch(err){toast("저장하지 못했어요: "+err.message);return}
+  db.weeks.forEach(w=>w.list.forEach(s=>{if(s.preset===key){s.orgTitle=p.orgTitle;s.orgSub=p.orgSub;s.footBold=p.footBold||"";s.footLight=p.footLight||""}}));
+  if(!pfEdit&&cur()){const s=cur();s.preset=key;s.orgTitle=p.orgTitle;s.orgSub=p.orgSub;s.footBold=p.footBold||"";s.footLight=p.footLight||"";s.logo="";s.showPct=p.showPct}
+  closeModal("mPreset");save();buildPresetSelect();buildEditor();toast(pfEdit?"양식을 고쳤어요":"새 기관 양식을 만들고 이 학생에게 적용했어요");
+});
+$("pfDel").onclick=async()=>{
+  const b=$("pfDel");if(!b.dataset.arm){b.dataset.arm=1;b.textContent="한 번 더 누르면 삭제";setTimeout(()=>{delete b.dataset.arm;b.textContent="이 양식 삭제"},2500);return}
+  const k=pfEdit;const used=db.weeks.some(w=>w.list.some(s=>s.preset===k));
+  if(used){toast("이 양식을 쓰는 학생이 있어서 지울 수 없어요. 학생 양식을 먼저 바꿔 주세요");return}
+  delete PRESETS[k];await savePresets();closeModal("mPreset");buildPresetSelect();buildEditor();toast("양식을 지웠어요");
+};
+window.applyCustomPresetsRemote=obj=>{applyCustomPresets(obj);buildPresetSelect();if(db)buildEditor()};
+
 /* ---------- 메모 사진 인식 ---------- */
 let memoData=null;
 $("bMemo").onclick=()=>{
@@ -1315,7 +1445,7 @@ function applyMemo(){
   document.querySelectorAll("#memoRes .mg").forEach(sec=>{
     const g=groups[+sec.dataset.g];const s=db.list.find(x=>x.id===sec.querySelector(".mstu").value);
     if(!s){if(sec.querySelector("input:checked"))miss++;return}
-    const A=PRESETS[s.preset].tpl==="A";const nums=sec.querySelector(".mnums")?.checked;
+    const A=P(s.preset).tpl==="A";const nums=sec.querySelector(".mnums")?.checked;
     sec.querySelectorAll(".mrow").forEach(row=>{
       const cb=row.querySelector("input[type=checkbox]");if(!cb.checked)return;
       const val=row.querySelector(".mv").value.trim();if(!val)return;
@@ -1337,7 +1467,7 @@ if(!CLOUD){buildEditor();drawWeekNav()}
 else{
   document.body.classList.add("locked");$("gate").hidden=false;$("gLoad").hidden=false;$("gLogin").hidden=true;$("gWait").hidden=true;
   window.appStart=weeks=>{
-    db=initDb({cur:"",wi:Math.max(0,weeks.length-1),weeks:weeks.length?weeks:[{list:[fill({id:uid(),preset:"gis-dream",name:"새 학생",subjects:[]})]}]});
+    db=initDb({cur:"",wi:Math.max(0,weeks.length-1),weeks:weeks.length?weeks:[{list:[fill({id:uid(),preset:"gis-dream",name:"새 학생",...todayWeek(),subjects:[]})]}]});
     db.cur=db.list[0]?.id;buildEditor();drawWeekNav();
   };
   window.cloudApply=weeks=>{
@@ -1368,14 +1498,19 @@ const esc=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const isAdminEmail=u=>!!u&&ADMINS.includes((u.email||"").toLowerCase());
 const isAdmin=u=>isAdminEmail(u)&&u.emailVerified;
 const view=v=>{["gLogin","gWait","gLoad"].forEach(id=>$(id).hidden=id!==v);$("gate").hidden=!v;document.body.classList.toggle("locked",!!v)};
-const errMsg=e=>{const c=e?.code||"";return({"auth/invalid-credential":"이메일 또는 비밀번호가 맞지 않아요.","auth/wrong-password":"이메일 또는 비밀번호가 맞지 않아요.","auth/user-not-found":"가입된 이메일이 아니에요.","auth/email-already-in-use":"이미 가입된 이메일이에요. 로그인해 주세요.","auth/weak-password":"비밀번호는 6자 이상으로 해주세요.","auth/invalid-email":"이메일 형식을 확인해 주세요.","auth/too-many-requests":"시도가 너무 많아요. 잠시 후 다시 해주세요.","auth/network-request-failed":"인터넷 연결을 확인해 주세요."})[c]||("문제가 생겼어요: "+(e?.message||c))};
+const errMsg=e=>{const c=e?.code||"";return({"auth/invalid-credential":"이름 또는 비밀번호가 맞지 않아요.","auth/wrong-password":"이름 또는 비밀번호가 맞지 않아요.","auth/user-not-found":"가입된 이름이 아니에요.","auth/email-already-in-use":"이미 쓰고 있는 이름이에요. 뒤에 숫자를 붙여 주세요 (예: 김민준2).","auth/weak-password":"비밀번호는 6자 이상으로 해주세요.","auth/invalid-email":"이름이 너무 길거나 쓸 수 없는 글자가 있어요.","auth/too-many-requests":"시도가 너무 많아요. 잠시 후 다시 해주세요.","auth/network-request-failed":"인터넷 연결을 확인해 주세요."})[c]||("문제가 생겼어요: "+(e?.message||c))};
 const setErr=m=>{$("gErr").textContent=m||""};
+const toEmail=v=>{v=v.trim();if(v.includes("@"))return v;return "u"+[...new TextEncoder().encode(v.toLowerCase())].map(b=>b.toString(16).padStart(2,"0")).join("")+"@users.peacefull.app"};
+const isIdEmail=e=>/@users\.peacefull\.app$/.test(e||"");
+$("liEmail").addEventListener("input",()=>{$("bForgot").hidden=!$("liEmail").value.includes("@")});
 
 /* 로그인 / 가입 화면 */
 document.querySelectorAll("[data-gt]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-gt]").forEach(x=>x.classList.toggle("on",x===b));$("fLogin").hidden=b.dataset.gt!=="login";$("fSignup").hidden=b.dataset.gt!=="signup";setErr("")});
-$("fLogin").addEventListener("submit",async e=>{e.preventDefault();setErr("");try{await A.signInWithEmailAndPassword(auth,$("liEmail").value.trim(),$("liPw").value)}catch(err){setErr(errMsg(err))}});
+$("fLogin").addEventListener("submit",async e=>{e.preventDefault();setErr("");try{await A.signInWithEmailAndPassword(auth,toEmail($("liEmail").value),$("liPw").value)}catch(err){setErr(errMsg(err))}});
 $("fSignup").addEventListener("submit",async e=>{e.preventDefault();setErr("");
-  const name=$("suName").value.trim(),email=$("suEmail").value.trim();
+  const name=$("suName").value.trim(),email=toEmail(name);
+  if(!name){setErr("이름을 입력해 주세요.");return}
+  if($("suPw").value!==$("suPw2").value){setErr("비밀번호 두 칸이 서로 달라요.");return}
   try{const c=await A.createUserWithEmailAndPassword(auth,email,$("suPw").value);
     await A.updateProfile(c.user,{displayName:name});
     await F.setDoc(F.doc(fs,"users",c.user.uid),{name,email,status:"pending",createdAt:F.serverTimestamp()}).catch(()=>{});
@@ -1387,7 +1522,12 @@ window.cloudSignOut=()=>A.signOut(auth);
 
 /* 데이터 동기화: weeks/{w0001..} 문서 = 한 주차 */
 const wid=i=>"w"+String(i+1).padStart(4,"0");
-let synced=[],unsubWeeks=null,unsubMe=null,unsubUsers=null,started=false;
+let synced=[],unsubWeeks=null,unsubMe=null,unsubUsers=null,unsubPre=null,started=false;
+window.cloudSavePresets=o=>F.setDoc(F.doc(fs,"meta","presets"),{data:o,at:F.serverTimestamp(),by:auth.currentUser?.uid||""});
+function listenPresets(){return new Promise(res=>{let first=true;
+  unsubPre=F.onSnapshot(F.doc(fs,"meta","presets"),d=>{const o=d.exists()?(d.data().data||{}):{};
+    if(first){first=false;window.applyCustomPresets(o);window.buildPresetSelect&&buildPresetSelect();res()}
+    else window.applyCustomPresetsRemote(o)},()=>{if(first){first=false;res()}})})}
 window.cloudSave=async(db)=>{
   const ws=db.weeks.map(w=>JSON.stringify(w.list));
   const batch=F.writeBatch(fs);let n=0;
@@ -1396,7 +1536,8 @@ window.cloudSave=async(db)=>{
   if(!n)return true;
   await batch.commit();synced=ws;return true;
 };
-function listenWeeks(){
+async function listenWeeks(){
+  await listenPresets();
   unsubWeeks=F.onSnapshot(F.query(F.collection(fs,"weeks"),F.orderBy("i")),snap=>{
     const weeks=snap.docs.map(d=>({list:d.data().list||[]}));
     if(snap.metadata.hasPendingWrites)return;
@@ -1406,7 +1547,7 @@ function listenWeeks(){
     synced=js;window.cloudApply(weeks);
   },err=>{view("gWait");$("gWaitTitle").textContent="데이터를 불러올 수 없어요";$("gWaitMsg").textContent=errMsg(err)});
 }
-function stopAll(){[unsubWeeks,unsubMe,unsubUsers].forEach(f=>f&&f());unsubWeeks=unsubMe=unsubUsers=null}
+function stopAll(){[unsubWeeks,unsubMe,unsubUsers,unsubPre].forEach(f=>f&&f());unsubWeeks=unsubMe=unsubUsers=unsubPre=null}
 
 A.onAuthStateChanged(auth,async u=>{
   stopAll();
@@ -1426,14 +1567,14 @@ A.onAuthStateChanged(auth,async u=>{
     document.body.classList.add("is-admin");listenUsers();listenWeeks();return;
   }
   unsubMe=F.onSnapshot(ref,async s=>{
-    if(!s.exists()){view("gWait");$("gWaitTitle").textContent="관리자 승인을 기다리고 있어요";$("gWaitMsg").textContent=`${u.email} · 승인되면 이 화면이 자동으로 바뀝니다.`;
+    if(!s.exists()){view("gWait");$("gWaitTitle").textContent="관리자 승인을 기다리고 있어요";$("gWaitMsg").textContent=`${u.displayName||""} · 승인되면 이 화면이 자동으로 바뀝니다.`;
       setTimeout(async()=>{const d=await F.getDoc(ref).catch(()=>null);if(d&&!d.exists())await F.setDoc(ref,{name:u.displayName||"",email:u.email,status:"pending",createdAt:F.serverTimestamp()}).catch(()=>{})},3000);return}
     const st=s.data().status;
-    if(st==="approved"){if(!unsubWeeks)listenWeeks()}
+    if(st==="approved"){if(!unsubWeeks&&!window.__lw){window.__lw=1;listenWeeks()}}
     else{if(started){location.reload();return}
       view("gWait");
       $("gWaitTitle").textContent=st==="rejected"?"가입이 승인되지 않았어요":"관리자 승인을 기다리고 있어요";
-      $("gWaitMsg").textContent=st==="rejected"?"관리자에게 문의해 주세요.":`${u.email} · 승인되면 이 화면이 자동으로 바뀝니다.`}
+      $("gWaitMsg").textContent=st==="rejected"?"관리자에게 문의해 주세요.":`${u.displayName||s.data().name||""} · 승인되면 이 화면이 자동으로 바뀝니다.`}
   },err=>{view("gWait");$("gWaitTitle").textContent="확인할 수 없어요";$("gWaitMsg").textContent=errMsg(err)});
 });
 
@@ -1453,7 +1594,7 @@ function drawUsers(){
   $("uTabs").innerHTML=["pending","approved","rejected"].map(k=>`<button type="button" class="${k===uFilter?"on":""}" data-uf="${k}">${ST[k]} <em>${cnt(k)}</em></button>`).join("");
   const L=users.filter(x=>x.status===uFilter).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
   $("uList").innerHTML=L.length?L.map(x=>{const me=x.id===auth.currentUser?.uid;const d=x.createdAt?.toDate?x.createdAt.toDate():null;
-    return `<div class="urow"><div class="uinfo"><b>${esc(x.name||"(이름 없음)")}${x.admin?' <span class="tag">관리자</span>':""}</b><span>${esc(x.email)}</span>${d?`<small>${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} 신청</small>`:""}</div>
+    return `<div class="urow"><div class="uinfo"><b>${esc(x.name||"(이름 없음)")}${x.admin?' <span class="tag">관리자</span>':""}</b><span>${isIdEmail(x.email)?"이름으로 가입":esc(x.email)}</span>${d?`<small>${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} 신청</small>`:""}</div>
       <div class="uact">${me?"":`${x.status!=="approved"?`<button type="button" class="btn pri sm" data-ua="approved" data-uid="${x.id}">승인</button>`:""}${x.status!=="rejected"?`<button type="button" class="btn line sm" data-ua="rejected" data-uid="${x.id}">${x.status==="approved"?"권한 해제":"거절"}</button>`:""}${x.status==="rejected"?`<button type="button" class="btn line sm" data-ua="delete" data-uid="${x.id}" style="color:var(--danger)">목록에서 삭제</button>`:""}`}</div></div>`}).join("")
     :`<p class="rempty">${ST[uFilter]} 회원이 없어요</p>`;
 }
