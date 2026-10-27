@@ -238,6 +238,9 @@ body.modal-open{overflow:hidden}
 .pmrow b{flex:1;min-width:0}
 .pmrow small{color:var(--mute);font-size:12px}
 #pmList{display:grid;gap:8px}
+.rotrow{display:flex;justify-content:flex-start;padding:4px 2px 2px}
+.rotrow .btn{gap:6px}
+.rotrow .btn[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
 button.wlbl{border:0;background:none;color:inherit;font:inherit;cursor:pointer;border-radius:9px;padding:3px 6px}
 button.wlbl:hover,button.wlbl:active{background:rgba(255,255,255,.1)}
 .wklist{display:grid;gap:8px}
@@ -612,6 +615,7 @@ button.wlbl:hover,button.wlbl:active{background:rgba(255,255,255,.1)}
         <p class="hint">데이터는 이 기기 브라우저에 자동 저장됩니다. 폰↔PC 옮길 땐 백업 파일을 쓰세요.</p>
       </div>
     </details>
+    <div class="rotrow" id="rotRow" hidden><button class="btn line sm" id="bRot" type="button" aria-pressed="false"></button></div>
   </aside>
 
   <main class="pv" id="pv">
@@ -1384,6 +1388,31 @@ function closeModal(id){$(id).hidden=true;if(!document.querySelector(".modal:not
 document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m||e.target.closest("[data-close]"))closeModal(m.id)}));
 document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".modal:not([hidden])").forEach(m=>closeModal(m.id))});
 $("bUsers").onclick=()=>openModal("mUsers");
+/* ---------- 화면 회전 잠금 ---------- */
+(function(){
+  const RK="weekly-report-rotlock",O=screen.orientation,btn=$("bRot");
+  const get=()=>{try{return localStorage.getItem(RK)||""}catch(e){return""}};
+  const set=v=>{try{v?localStorage.setItem(RK,v):localStorage.removeItem(RK)}catch(e){}};
+  const iOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  if(!matchMedia("(pointer:coarse)").matches)return;
+  $("rotRow").hidden=false;
+  const draw=()=>{const v=get();btn.setAttribute("aria-pressed",v?"true":"false");
+    btn.textContent=v?`🔒 ${v==="landscape"?"가로":"세로"} 고정 · 눌러서 풀기`:"🔓 화면 회전 켜짐 · 눌러서 잠금"};
+  async function lock(v,gesture){
+    if(!O||!O.lock)throw new Error("unsupported");
+    try{await O.lock(v)}catch(e){
+      if(!gesture||document.fullscreenElement||!document.documentElement.requestFullscreen)throw e;
+      await document.documentElement.requestFullscreen({navigationUI:"hide"});await O.lock(v)}
+  }
+  btn.onclick=async()=>{
+    if(get()){set("");try{O&&O.unlock&&O.unlock()}catch(e){}draw();toast("화면 회전을 다시 켰어요");return}
+    const v=O&&String(O.type||"").startsWith("landscape")?"landscape":"portrait";
+    try{await lock(v,true);set(v);draw();toast(`${v==="landscape"?"가로":"세로"} 화면으로 고정했어요`)}
+    catch(e){toast(iOS?"아이폰은 제어 센터의 '화면 회전 잠금'을 써 주세요":"홈 화면에 추가한 앱에서 열면 잠글 수 있어요")}
+  };
+  draw();
+  const v=get();if(v){lock(v,false).catch(()=>{const once=()=>{lock(v,false).catch(()=>{});removeEventListener("pointerdown",once)};addEventListener("pointerdown",once)})}
+})();
 $("bLogout").onclick=()=>{if(window.cloudSignOut)window.cloudSignOut();else toast("로그인 기능이 켜져 있지 않아요")};
 window.toast=toast;
 
