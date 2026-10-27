@@ -114,7 +114,7 @@ button,input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .sj label{display:grid;gap:3px;font-size:11px;color:var(--mute);min-width:0}
 .ibtn{border:1px solid var(--line);background:#fff;border-radius:8px;width:34px;height:36px;flex:none;cursor:pointer;font-size:15px;color:var(--ink2)}
 .tplA .onlyB,.tplB .onlyA{display:none!important}
-.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:90}
 .toast.on{opacity:1}
 .tabs{display:none}
 #printArea{display:none}
@@ -238,6 +238,20 @@ body.modal-open{overflow:hidden}
 .pmrow b{flex:1;min-width:0}
 .pmrow small{color:var(--mute);font-size:12px}
 #pmList{display:grid;gap:8px}
+button.wlbl{border:0;background:none;color:inherit;font:inherit;cursor:pointer;border-radius:9px;padding:3px 6px}
+button.wlbl:hover,button.wlbl:active{background:rgba(255,255,255,.1)}
+.wklist{display:grid;gap:8px}
+.wkrow{border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;gap:8px}
+.wkrow.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.wkh{display:flex;align-items:center;gap:8px;min-width:0}
+.wkh b{font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wkh small{color:var(--mute);font-size:12px;white-space:nowrap}
+.wkact{display:flex;gap:6px;flex-wrap:wrap}
+.wkact .btn{flex:1;justify-content:center}
+.wkact .del{color:var(--danger)}
+.wkact .del.arm{background:var(--danger);color:#fff;border-color:var(--danger)}
+.wkedit{display:grid;gap:8px;border-top:1px dashed var(--line);padding-top:8px}
+.wkedit .fld small{color:var(--mute);font-size:11.5px}
 
 /* ============ 인쇄 ============ */
 @media print{
@@ -448,7 +462,7 @@ body.modal-open{overflow:hidden}
     <div class="sp"></div>
     <nav class="wk-nav" aria-label="주차 이동">
       <button type="button" class="wbtn" id="wPrev" aria-label="이전 주차">◀</button>
-      <div class="wlbl"><b id="wLabel"></b><small id="wSub"></small></div>
+      <button type="button" class="wlbl" id="wLbl" aria-label="주차 관리 열기"><b id="wLabel"></b><small id="wSub"></small></button>
       <button type="button" class="wbtn nx" id="wNext" aria-label="다음 주차">다음 주차 ▶</button>
     </nav>
     <div class="sp"></div>
@@ -674,6 +688,14 @@ body.modal-open{overflow:hidden}
       <div class="mact"><button type="button" class="btn line" id="pfDel" hidden style="color:var(--danger)">이 양식 삭제</button><span style="flex:1"></span><button type="submit" class="btn pri">저장</button></div>
     </form>
     <div id="pmList" hidden></div>
+  </div>
+</div>
+<!-- ===== 주차 관리 ===== -->
+<div class="modal" id="mWeeks" hidden>
+  <div class="mcard">
+    <div class="mhd"><b>주차 관리</b><button type="button" class="ibtn" data-close aria-label="닫기">✕</button></div>
+    <p class="hint" style="margin:0">주차를 눌러 열거나, 이름·날짜를 한 번에 바꾸거나, 잘못 만든 주차를 지울 수 있어요.</p>
+    <div class="wklist" id="wkList"></div>
   </div>
 </div>
 <!-- ===== 메모 사진 인식 ===== -->
@@ -1105,7 +1127,7 @@ function weekLabel(w){const c={};w.list.forEach(s=>{if(s.week)c[s.week]=(c[s.wee
 function drawWeekNav(){
   const w=db.weeks[db.wi];
   $("wLabel").textContent=weekLabel(w);
-  $("wSub").textContent=db.wi===db.weeks.length-1?`최신 · ${db.wi+1}/${db.weeks.length}`:`지난 주차 · ${db.wi+1}/${db.weeks.length}`;
+  $("wSub").textContent=db.wi===db.weeks.length-1?`최신 · ${db.wi+1}/${db.weeks.length} ▾`:`지난 주차 · ${db.wi+1}/${db.weeks.length} ▾`;
   $("wPrev").disabled=db.wi===0;
   const nx=$("wNext");nx.classList.remove("arm");delete nx.dataset.arm;
   nx.textContent=db.wi<db.weeks.length-1?"▶":"다음 주차 ▶";
@@ -1125,6 +1147,47 @@ $("wNext").onclick=()=>{
   db.weeks.push({list});gotoWeek(db.weeks.length-1);
   toast(`${weekLabel(db.weeks[db.wi])}로 넘어갔어요 · 지난 주는 ◀로 볼 수 있어요`);
 };
+/* ---------- 주차 관리 ---------- */
+let wkOpen=-1;
+function weekInfo(w){const A=w.list.filter(s=>P(s.preset).tpl==="A"),B=w.list.filter(s=>P(s.preset).tpl!=="A");
+  return{label:weekLabel(w),A:A.length,B:B.length,date:mode(A.map(s=>s.date)),month:mode(B.map(s=>s.month)),next:mode(B.map(s=>s.nextWeek)),n:w.list.length}}
+function drawWeeks(){
+  const L=db.weeks.map((w,i)=>[w,i]).reverse();
+  $("wkList").innerHTML=L.map(([w,i])=>{const f=weekInfo(w),last=i===db.weeks.length-1;
+    return `<div class="wkrow${i===db.wi?" on":""}" data-wi="${i}">
+      <div class="wkh"><b>${esc(f.label)}</b><small>${esc(f.date||f.month||"")} · ${f.n}명${last?" · 최신":""}${i===db.wi?" · 보는 중":""}</small></div>
+      <div class="wkact"><button type="button" class="btn line sm" data-wk="go">열기</button><button type="button" class="btn line sm" data-wk="edit">이름·날짜 바꾸기</button><button type="button" class="btn line sm del" data-wk="del" ${db.weeks.length<2?"disabled":""}>삭제</button></div>
+      ${wkOpen===i?`<div class="wkedit">
+        <label class="fld"><span>주차 이름 <small>(이 주차 학생 ${f.n}명 모두)</small></span><input type="text" data-k="week" value="${esc(f.label==="주차"?"":f.label)}" placeholder="예: 10월 다섯째 주"></label>
+        ${f.A?`<label class="fld"><span>날짜 <small>(웜 양식 ${f.A}명)</small></span><input type="text" data-k="date" value="${esc(f.date)}" placeholder="예: 2026.10.27 / 10.29"></label>`:""}
+        ${f.B?`<div class="row"><label class="fld"><span>월 <small>(블루 양식 ${f.B}명)</small></span><input type="text" data-k="month" value="${esc(f.month)}" placeholder="예: 2026.10"></label>
+          <label class="fld"><span>다음 주 표시</span><input type="text" data-k="nextWeek" value="${esc(f.next)}" placeholder="예: 11월 첫째 주"></label></div>`:""}
+        <div class="mact"><button type="button" class="btn line sm" data-wk="cancel">취소</button><span style="flex:1"></span><button type="button" class="btn pri sm" data-wk="save">모두 적용</button></div>
+      </div>`:""}
+    </div>`}).join("");
+}
+function openWeeks(){wkOpen=-1;drawWeeks();openModal("mWeeks")}
+$("wLbl").onclick=openWeeks;
+$("wkList").addEventListener("click",e=>{
+  const b=e.target.closest("[data-wk]");if(!b)return;const row=b.closest("[data-wi]"),i=+row.dataset.wi,a=b.dataset.wk;
+  if(a==="go"){gotoWeek(i);closeModal("mWeeks");return}
+  if(a==="edit"){wkOpen=wkOpen===i?-1:i;drawWeeks();row.parentNode.querySelector(`[data-wi="${i}"] .wkedit input`)?.focus();return}
+  if(a==="cancel"){wkOpen=-1;drawWeeks();return}
+  if(a==="save"){
+    const w=db.weeks[i],v={};row.querySelectorAll(".wkedit input").forEach(x=>v[x.dataset.k]=x.value.trim());
+    w.list.forEach(s=>{const A=P(s.preset).tpl==="A";if(v.week)s.week=v.week;if(A&&v.date)s.date=v.date;if(!A&&v.month)s.month=v.month;if(!A&&v.nextWeek)s.nextWeek=v.nextWeek});
+    wkOpen=-1;save();if(i===db.wi)buildEditor();drawWeekNav();drawWeeks();toast("이 주차 학생 모두에게 적용했어요");return}
+  if(a==="del"){
+    if(db.weeks.length<2)return;
+    if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="정말 삭제?";clearTimeout(b._t);b._t=setTimeout(()=>{b.classList.remove("arm");b.textContent="삭제"},3000);return}
+    const snap=JSON.stringify(db.weeks[i].list),lbl=weekLabel(db.weeks[i]),id=cur()?.id;
+    db.weeks.splice(i,1);
+    if(db.wi>i||db.wi>=db.weeks.length)db.wi=Math.max(0,db.wi-1);
+    if(!db.list.some(s=>s.id===id))db.cur=db.list[0]?.id;
+    wkOpen=-1;save();buildEditor();drawWeekNav();drawWeeks();
+    toast(`${lbl} 삭제했어요`,"되돌리기",()=>{db.weeks.splice(i,0,{list:JSON.parse(snap).map(fill)});db.wi=i;save();buildEditor();drawWeekNav();if(!$("mWeeks").hidden)drawWeeks()});
+  }
+});
 $("bAll").onclick=()=>{
   const c=cur(),t=P(c.preset).tpl;let n=0;
   db.list.forEach(s=>{if(P(s.preset).tpl===t){s.week=c.week;s.date=c.date;s.month=c.month;s.nextWeek=c.nextWeek;n++}});
@@ -1176,7 +1239,15 @@ $("bPrint").onclick=()=>{$("printArea").innerHTML=renderReport(cur());setTimeout
 $("bExport").onclick=()=>{dl(new Blob([JSON.stringify(db,null,1)],{type:"application/json"}),`주간리포트_백업_${new Date().toISOString().slice(0,10)}.json`)};
 $("importFile").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
-  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.list&&!d.weeks)throw 0;const nd=initDb(d);if(!nd)throw 0;db=nd;save();buildEditor();toast("불러왔어요")}catch(err){toast("백업 파일 형식이 아니에요")}};
+  r.onload=()=>{let nd;try{const d=JSON.parse(r.result);if(!d.list&&!d.weeks)throw 0;nd=initDb(d);if(!nd)throw 0}catch(err){toast("백업 파일 형식이 아니에요");return}
+    const empty=db.weeks.every(w=>w.list.every(x=>!String(x.name||"").trim()));
+    if(empty){db=nd;save();buildEditor();drawWeekNav();toast(`${db.list.length}명 불러왔어요`);return}
+    /* 이미 학생이 있으면: 지금 보는 주차에 없는 이름만 추가 */
+    const snap=JSON.stringify(db.weeks[db.wi].list),have=new Set(db.list.map(x=>norm(x.name)));let add=0,skip=0;
+    nd.weeks[nd.weeks.length-1].list.forEach(x=>{if(!String(x.name||"").trim())return;if(have.has(norm(x.name))){skip++;return}x.id=uid();db.list.push(x);have.add(norm(x.name));add++});
+    db.list=db.list.filter(x=>String(x.name||"").trim()||db.list.length===1);if(!db.list.some(x=>x.id===db.cur))db.cur=db.list[0]?.id;
+    save();buildEditor();drawWeekNav();
+    toast(`${add}명 추가${skip?` · 이미 있는 ${skip}명은 그대로`:""}`,"되돌리기",()=>{db.weeks[db.wi].list=JSON.parse(snap).map(fill);save();buildEditor()})};
   r.readAsText(f);e.target.value="";
 });
 
