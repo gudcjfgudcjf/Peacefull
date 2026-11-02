@@ -255,6 +255,12 @@ button.wlbl:hover,button.wlbl:active{background:rgba(255,255,255,.1)}
 .wkact .del.arm{background:var(--danger);color:#fff;border-color:var(--danger)}
 .wkedit{display:grid;gap:8px;border-top:1px dashed var(--line);padding-top:8px}
 .wkedit .fld small{color:var(--mute);font-size:11.5px}
+.wkg{display:grid;gap:6px;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.wkgh{display:flex;align-items:center;gap:6px}
+.wkgh i{width:9px;height:9px;border-radius:50%;flex:none}
+.wkgh b{font-size:13.5px;flex:1}
+.wkgh small{color:var(--mute);font-size:12px}
+.wkg .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px}
 
 /* ============ 인쇄 ============ */
 @media print{
@@ -494,7 +500,7 @@ button.wlbl:hover,button.wlbl:active{background:rgba(255,255,255,.1)}
     <button class="btn memo-cta" id="bMemo" type="button"><b>메모 사진으로 입력</b><span>손글씨 메모를 찍으면 과목별로 채워 줘요</span></button>
     <div class="tools">
       <button class="btn line sm" id="bDup" type="button">복제</button>
-      <button class="btn line sm" id="bAll" type="button">주차·날짜 전체 적용</button>
+      <button class="btn line sm" id="bAll" type="button">이 기관 학생에게 주차·날짜 적용</button>
       <button class="btn line sm" id="bDel" type="button" style="color:var(--danger)">삭제</button>
     </div>
 
@@ -829,7 +835,7 @@ const cur=()=>db.list.find(s=>s.id===db.cur)||db.list[0];
 let saveT;
 function save(){clearTimeout(saveT);$("saved").textContent="저장 중…";
   saveT=setTimeout(async()=>{saveT=null;
-    if(CLOUD){try{await window.cloudSave(db);$("saved").textContent="저장됨 · 공유 중"}catch(e){console.error(e);$("saved").textContent="저장 실패 · 다시 시도";setTimeout(save,4000)}return}
+    if(CLOUD){try{await window.cloudSave(db);$("saved").textContent="저장됨 · 공유 중"}catch(e){console.error(e);$("saved").textContent="저장 실패 · 다시 시도"+(e&&e.code?` (${e.code})`:"");setTimeout(save,4000)}return}
     try{localStorage.setItem(KEY,JSON.stringify(db));$("saved").textContent="자동 저장됨"}catch(e){$("saved").textContent="저장 실패(용량)"}},CLOUD?700:300)}
 
 /* ---------- 유틸 ---------- */
@@ -1162,25 +1168,30 @@ function drawWeeks(){
       <div class="wkh"><b>${esc(f.label)}</b><small>${esc(f.date||f.month||"")} · ${f.n}명${last?" · 최신":""}${i===db.wi?" · 보는 중":""}</small></div>
       <div class="wkact"><button type="button" class="btn line sm" data-wk="go">열기</button><button type="button" class="btn line sm" data-wk="edit">이름·날짜 바꾸기</button><button type="button" class="btn line sm del" data-wk="del" ${db.weeks.length<2?"disabled":""}>삭제</button></div>
       ${wkOpen===i?`<div class="wkedit">
-        <label class="fld"><span>주차 이름 <small>(이 주차 학생 ${f.n}명 모두)</small></span><input type="text" data-k="week" value="${esc(f.label==="주차"?"":f.label)}" placeholder="예: 10월 다섯째 주"></label>
-        ${f.A?`<label class="fld"><span>날짜 <small>(웜 양식 ${f.A}명)</small></span><input type="text" data-k="date" value="${esc(f.date)}" placeholder="예: 2026.10.27 / 10.29"></label>`:""}
-        ${f.B?`<div class="row"><label class="fld"><span>월 <small>(블루 양식 ${f.B}명)</small></span><input type="text" data-k="month" value="${esc(f.month)}" placeholder="예: 2026.10"></label>
-          <label class="fld"><span>다음 주 표시</span><input type="text" data-k="nextWeek" value="${esc(f.next)}" placeholder="예: 11월 첫째 주"></label></div>`:""}
-        <div class="mact"><button type="button" class="btn line sm" data-wk="cancel">취소</button><span style="flex:1"></span><button type="button" class="btn pri sm" data-wk="save">모두 적용</button></div>
+        ${groupsOf(w).map(([k,L])=>{const A=P(k).tpl==="A";return `<div class="wkg" data-g="${esc(k)}">
+          <div class="wkgh"><i style="background:${esc(P(k).dot||"#999")}"></i><b>${esc(P(k).short)}</b><small>${L.length}명</small></div>
+          <div class="row"><label class="fld"><span>주차 이름</span><input type="text" data-k="week" value="${esc(mode(L.map(s=>s.week)))}" placeholder="예: 11월 첫째 주"></label>
+          ${A?`<label class="fld"><span>날짜</span><input type="text" data-k="date" value="${esc(mode(L.map(s=>s.date)))}" placeholder="예: 2026.11.03 / 11.05"></label>`
+             :`<label class="fld"><span>월</span><input type="text" data-k="month" value="${esc(mode(L.map(s=>s.month)))}" placeholder="예: 2026.11"></label>
+               <label class="fld"><span>다음 주 표시</span><input type="text" data-k="nextWeek" value="${esc(mode(L.map(s=>s.nextWeek)))}" placeholder="예: 11월 둘째 주"></label>`}</div>
+        </div>`}).join("")}
+        <div class="mact"><button type="button" class="btn line sm" data-wk="cancel">취소</button><span style="flex:1"></span><button type="button" class="btn pri sm" data-wk="save">기관별로 저장</button></div>
       </div>`:""}
     </div>`}).join("");
 }
+function groupsOf(w){const m=new Map();w.list.forEach(s=>{if(!m.has(s.preset))m.set(s.preset,[]);m.get(s.preset).push(s)});return[...m]}
 function openWeeks(){wkOpen=-1;drawWeeks();openModal("mWeeks")}
 $("wLbl").onclick=openWeeks;
 $("wkList").addEventListener("click",e=>{
   const b=e.target.closest("[data-wk]");if(!b)return;const row=b.closest("[data-wi]"),i=+row.dataset.wi,a=b.dataset.wk;
   if(a==="go"){gotoWeek(i);closeModal("mWeeks");return}
-  if(a==="edit"){wkOpen=wkOpen===i?-1:i;drawWeeks();row.parentNode.querySelector(`[data-wi="${i}"] .wkedit input`)?.focus();return}
+  if(a==="edit"){wkOpen=wkOpen===i?-1:i;drawWeeks();$("wkList").querySelector(`[data-wi="${i}"] .wkedit input`)?.focus();return}
   if(a==="cancel"){wkOpen=-1;drawWeeks();return}
   if(a==="save"){
-    const w=db.weeks[i],v={};row.querySelectorAll(".wkedit input").forEach(x=>v[x.dataset.k]=x.value.trim());
-    w.list.forEach(s=>{const A=P(s.preset).tpl==="A";if(v.week)s.week=v.week;if(A&&v.date)s.date=v.date;if(!A&&v.month)s.month=v.month;if(!A&&v.nextWeek)s.nextWeek=v.nextWeek});
-    wkOpen=-1;save();if(i===db.wi)buildEditor();drawWeekNav();drawWeeks();toast("이 주차 학생 모두에게 적용했어요");return}
+    const w=db.weeks[i];let n=0;
+    row.querySelectorAll(".wkg").forEach(g=>{const v={};g.querySelectorAll("input").forEach(x=>v[x.dataset.k]=x.value.trim());
+      w.list.forEach(s=>{if(s.preset!==g.dataset.g)return;let c=0;["week","date","month","nextWeek"].forEach(k=>{if(v[k]!==undefined&&v[k]&&s[k]!==v[k]){s[k]=v[k];c=1}});n+=c})});
+    wkOpen=-1;save();if(i===db.wi)buildEditor();drawWeekNav();drawWeeks();toast(n?`기관별 주차·날짜를 저장했어요 (${n}명 바뀜)`:"바뀐 내용이 없어요");return}
   if(a==="del"){
     if(db.weeks.length<2)return;
     if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="정말 삭제?";clearTimeout(b._t);b._t=setTimeout(()=>{b.classList.remove("arm");b.textContent="삭제"},3000);return}
@@ -1193,9 +1204,9 @@ $("wkList").addEventListener("click",e=>{
   }
 });
 $("bAll").onclick=()=>{
-  const c=cur(),t=P(c.preset).tpl;let n=0;
-  db.list.forEach(s=>{if(P(s.preset).tpl===t){s.week=c.week;s.date=c.date;s.month=c.month;s.nextWeek=c.nextWeek;n++}});
-  save();toast(`같은 양식 ${n}명에게 주차·날짜 적용`);
+  const c=cur();let n=0;
+  db.list.forEach(s=>{if(s.preset===c.preset&&s!==c){s.week=c.week;s.date=c.date;s.month=c.month;s.nextWeek=c.nextWeek;n++}});
+  save();toast(`${P(c.preset).short} ${n+1}명에게 주차·날짜 적용 · 다른 기관은 그대로`);
 };
 $("logoFile").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
@@ -1566,38 +1577,14 @@ function applyMemo(){
 if(!CLOUD){buildEditor();drawWeekNav()}
 else{
   document.body.classList.add("locked");$("gate").hidden=false;$("gLoad").hidden=false;$("gLogin").hidden=true;$("gWait").hidden=true;
+  window.__db=()=>db;
   window.appStart=weeks=>{
-    db=initDb({cur:"",wi:Math.max(0,weeks.length-1),weeks:weeks.length?weeks:[{list:[fill({id:uid(),preset:"gis-dream",name:"새 학생",...todayWeek(),subjects:[]})]}]});
-    db.cur=db.list[0]?.id;buildEditor();drawWeekNav();
-  };
-  /* 3-way merge: B=마지막으로 서버와 맞춘 목록, L=이 기기, R=서버. 학생 단위로 합쳐서 남의 수정을 덮어쓰지 않음 */
-  const J=x=>JSON.stringify(x);
-  window.merge3=(B,L,R)=>{
-    const Bo=new Map(B.map(x=>[x.id,x])),Bm=new Map(B.map(x=>[x.id,J(x)])),Lm=new Map(L.map(x=>[x.id,x])),Rids=new Set(R.map(x=>x.id)),out=[];
-    R.forEach(r=>{const l=Lm.get(r.id);
-      if(l){const bj=Bm.get(r.id),lj=J(l);
-        if(lj===bj)out.push(r);else if(J(r)===bj||!Bo.has(r.id))out.push(l);
-        else{const b=Bo.get(r.id),m={...r};Object.keys(l).forEach(k=>{if(J(l[k])!==J(b[k]))m[k]=l[k]});out.push(m)}}
-      else if(!Bm.has(r.id))out.push(r);});
-    L.forEach(l=>{if(Rids.has(l.id))return;
-      if(!Bm.has(l.id)||J(l)!==Bm.get(l.id))out.push(l);});
-    return out;
-  };
-  window.normList=list=>(list||[]).map(x=>fill(JSON.parse(J(x))));
-  window.cloudApply=(weeks,base,struct)=>{
-    if(!db)return;
-    const id=db.cur,wi=db.wi,atLast=wi===db.weeks.length-1,grew=weeks.length>db.weeks.length;
-    if(struct||!base||base.length!==db.weeks.length||weeks.length!==db.weeks.length){
-      if(window.__wkStruct)return;
-      db.weeks=weeks.map(w=>({list:normList(w.list)}));
-    }else{
-      db.weeks=weeks.map((w,i)=>({list:merge3(base[i],db.weeks[i].list,normList(w.list))}));
-    }
-    db.wi=Math.min(atLast&&grew?weeks.length-1:wi,db.weeks.length-1);
-    db.cur=db.list.some(s=>s.id===id)?id:db.list[0]?.id;
-    cloudRefresh();
+    const blank=!weeks.length;
+    db=initDb({cur:"",wi:Math.max(0,weeks.length-1),weeks:blank?[{list:[fill({id:uid(),preset:"gis-dream",name:"새 학생",...todayWeek(),subjects:[]})]}]:weeks});
+    db.cur=db.list[0]?.id;buildEditor();drawWeekNav();if(blank)save();
   };
   window.cloudRefresh=()=>{
+    if(!db.list.length){const k=db.weeks.map((w,i)=>[w,i]).filter(([w])=>w.list.length).pop();if(k)db.wi=k[1];else return}
     if(!db.list.some(s=>s.id===db.cur))db.cur=db.list[0]?.id;
     const a=document.activeElement;const typing=a&&a.closest&&a.closest("#ed")&&/INPUT|TEXTAREA/.test(a.tagName);
     if(typing){buildStudents();draw()}else buildEditor();
@@ -1644,58 +1631,154 @@ $("bForgot").onclick=async()=>{const em=$("liEmail").value.trim();if(!em){setErr
 $("bWaitOut").onclick=()=>A.signOut(auth);
 window.cloudSignOut=()=>A.signOut(auth);
 
-/* 데이터 동기화: weeks/{w0001..} 문서 = 한 주차 */
-const wid=i=>"w"+String(i+1).padStart(4,"0");
-let synced=[],base=[],unsubWeeks=null,unsubMe=null,unsubUsers=null,unsubPre=null,started=false;
+/* 데이터 동기화
+   weeks/{주차id}            = 주차 정보 (순서 i)
+   weeks/{주차id}/s/{학생id} = 그 주차 · 그 학생의 리포트 한 장
+   → 학생마다·주차마다 따로 저장되고, 고친 칸만 보내서 여럿이 동시에 써도 덮어쓰지 않음.
+     인터넷이 끊겨도 폰에 보관했다가 연결되면 자동으로 올라감. */
+let unsubWeeks=null,unsubMe=null,unsubUsers=null,unsubPre=null,started=false;
+const W={};   /* 주차id → {i, base:Map(학생id→서버와 맞춘 내용), baseO:Map(학생id→순서), srv, unsub, ready, first, legacy} */
+const SJ=v=>JSON.stringify(v,(k,x)=>x&&typeof x==="object"&&!Array.isArray(x)?Object.keys(x).sort().reduce((o,kk)=>(o[kk]=x[kk],o),{}):x);
+const who=()=>auth.currentUser?.email||"";
+const nid=()=>"w"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const strip=o=>{const x=JSON.parse(JSON.stringify(o));delete x._o;delete x._at;delete x._by;return x};
+const norm1=o=>fill(strip(o));
+const setO=(o,v)=>Object.defineProperty(o,"__o",{value:v,enumerable:false,writable:true,configurable:true});
+const setId=(w,v)=>Object.defineProperty(w,"id",{value:v,enumerable:false,writable:true,configurable:true});
 window.cloudSavePresets=o=>F.setDoc(F.doc(fs,"meta","presets"),{data:o,at:F.serverTimestamp(),by:auth.currentUser?.uid||""});
 function listenPresets(){return new Promise(res=>{let first=true;
   unsubPre=F.onSnapshot(F.doc(fs,"meta","presets"),d=>{const o=d.exists()?(d.data().data||{}):{};
     if(first){first=false;window.applyCustomPresets(o);window.buildPresetSelect&&buildPresetSelect();res()}
     else window.applyCustomPresetsRemote(o)},()=>{if(first){first=false;res()}})})}
-const who=()=>auth.currentUser?.email||"";
-window.cloudSave=async(db)=>{
-  if(window.__wkStruct||base.length!==db.weeks.length){
-    /* 주차 추가·삭제: 주차 구조 전체를 한 번에 저장 */
-    const ws=db.weeks.map(w=>JSON.stringify(w.list));
-    const batch=F.writeBatch(fs);
-    ws.forEach((j,i)=>batch.set(F.doc(fs,"weeks",wid(i)),{i,list:JSON.parse(j),at:F.serverTimestamp(),by:who()}));
-    for(let i=ws.length;i<synced.length;i++)batch.delete(F.doc(fs,"weeks",wid(i)));
-    await batch.commit();window.__wkStruct=false;synced=ws;base=ws.map(j=>JSON.parse(j));return true;
+
+async function commitOps(ops){
+  for(let k=0;k<ops.length;k+=450){
+    const b=F.writeBatch(fs);
+    ops.slice(k,k+450).forEach(([t,ref,data,opt])=>t==="del"?b.delete(ref):opt?b.set(ref,data,opt):b.set(ref,data));
+    await b.commit();
   }
-  /* 평소 수정: 바뀐 학생만 서버 최신 내용 위에 합쳐서 저장 */
-  for(let i=0;i<db.weeks.length;i++){
-    const sent=JSON.parse(JSON.stringify(db.weeks[i].list));
-    if(JSON.stringify(sent)===JSON.stringify(base[i]))continue;
-    const ref=F.doc(fs,"weeks",wid(i)),b0=base[i];
-    const result=await F.runTransaction(fs,async tx=>{
-      const d=await tx.get(ref);const R=normList(d.exists()?d.data().list:[]);
-      const m=merge3(b0,sent,R);
-      tx.set(ref,{i,list:m,at:F.serverTimestamp(),by:who()});return m;
+}
+window.cloudSave=async db=>{
+  const ops=[],keep=new Set(),stamp=()=>({_at:F.serverTimestamp(),_by:who()});
+  db.weeks.forEach((w,i)=>{
+    if(!w.id)setId(w,nid());
+    keep.add(w.id);
+    let st=W[w.id];
+    if(!st){st=W[w.id]={i:null,base:new Map(),baseO:new Map(),srv:new Map(),ready:true,first:[]};subWeek(w.id)}
+    if(st.i!==i){ops.push(["set",F.doc(fs,"weeks",w.id),{i,at:F.serverTimestamp(),by:who()},{merge:true}]);st.i=i}
+    const seen=new Set();
+    w.list.forEach((x,o)=>{
+      if(!x.id)return;seen.add(x.id);
+      const cur=strip(x),ref=F.doc(fs,"weeks",w.id,"s",x.id),bj=st.base.get(x.id);
+      if(bj===undefined){ops.push(["set",ref,{...cur,_o:o,...stamp()}])}
+      else{const b=JSON.parse(bj),ch={};
+        Object.keys(cur).forEach(k=>{if(SJ(cur[k])!==SJ(b[k]))ch[k]=cur[k]});
+        Object.keys(b).forEach(k=>{if(!(k in cur))ch[k]=F.deleteField()});
+        if(st.baseO.get(x.id)!==o)ch._o=o;
+        if(Object.keys(ch).length)ops.push(["set",ref,{...ch,...stamp()},{merge:true}])}
+      st.base.set(x.id,SJ(cur));st.baseO.set(x.id,o);
     });
-    const now=db.weeks[i]?.list;
-    if(now){const merged=merge3(sent,now,result);if(JSON.stringify(merged)!==JSON.stringify(now)){db.weeks[i].list=merged;window.cloudRefresh&&cloudRefresh()}}
-    base[i]=result;synced[i]=JSON.stringify(result);
-  }
+    [...st.base.keys()].forEach(sid=>{if(!seen.has(sid)){ops.push(["del",F.doc(fs,"weeks",w.id,"s",sid)]);st.base.delete(sid);st.baseO.delete(sid)}});
+  });
+  Object.keys(W).forEach(id=>{if(keep.has(id)||!W[id].ready)return;
+    new Set([...W[id].base.keys(),...W[id].srv.keys()]).forEach(sid=>ops.push(["del",F.doc(fs,"weeks",id,"s",sid)]));
+    ops.push(["del",F.doc(fs,"weeks",id)]);W[id].unsub&&W[id].unsub();delete W[id]});
+  if(!ops.length)return true;
+  const slow=setTimeout(()=>{$("saved").textContent="연결 기다리는 중 · 폰에 보관됨"},6000);
+  try{await commitOps(ops)}
+  catch(e){Object.values(W).forEach(st=>{st.base=new Map([...st.srv].map(([k,v])=>[k,v.j]));st.baseO=new Map([...st.srv].map(([k,v])=>[k,v.o]))});throw e}
+  finally{clearTimeout(slow)}
   return true;
 };
+
+/* 서버에서 온 변경을 이 기기 화면에 합치기 (이 기기에서 아직 안 보낸 칸은 유지) */
+function applyStudent(w,st,sid,R){
+  const L=w.list,idx=L.findIndex(x=>x.id===sid),bj=st.base.get(sid),r=norm1(R),rj=SJ(strip(r));
+  if(idx<0){
+    if(bj!==undefined)return;                 /* 이 기기에서 지운 학생 */
+    const o=R._o??L.length;let at=L.findIndex(x=>(x.__o??1e9)>o);if(at<0)at=L.length;
+    setO(r,o);L.splice(at,0,r);
+  }else{
+    const l=L[idx];
+    if(bj===undefined||SJ(strip(l))===bj){setO(r,R._o);L[idx]=r}
+    else{const b=JSON.parse(bj);Object.keys(r).forEach(k=>{if(SJ(l[k])===SJ(b[k]))l[k]=r[k]})}
+  }
+  st.base.set(sid,rj);st.baseO.set(sid,R._o);
+}
+function localWeek(id){const db=window.__db();return db?db.weeks.find(w=>w.id===id):null}
+function subWeek(id){
+  const st=W[id];if(st.unsub)return;
+  st.srv=st.srv||new Map();st.first=st.first||[];
+  st.unsub=F.onSnapshot(F.collection(fs,"weeks",id,"s"),{includeMetadataChanges:true},snap=>{
+    if(snap.metadata.fromCache&&!st.ready)return;
+    if(!st.ready){st.ready=true;
+      st.first=snap.docs.map(d=>({id:d.id,data:d.data()}));
+      snap.docs.forEach(d=>st.srv.set(d.id,{j:SJ(strip(norm1(d.data()))),o:d.data()._o}));
+      if(!snap.size&&st.legacy)migrate(id,st.legacy);
+      if(started){const w=localWeek(id);if(w){st.first.forEach(f=>applyStudent(w,st,f.id,f.data));
+        const db=window.__db();if(window.__follow===id&&w.list.length){window.__follow=null;db.wi=db.weeks.indexOf(w)}window.cloudRefresh()}}
+      maybeStart();return}
+    const w=localWeek(id);let touched=false;
+    snap.docChanges({includeMetadataChanges:true}).forEach(c=>{
+      const d=c.doc;if(d.metadata.hasPendingWrites)return;
+      if(c.type==="removed"){st.srv.delete(d.id);
+        if(w&&started){const i=w.list.findIndex(x=>x.id===d.id),bj=st.base.get(d.id);
+          if(i>=0&&(bj===undefined||SJ(strip(w.list[i]))===bj)){w.list.splice(i,1);touched=true}}
+        st.base.delete(d.id);st.baseO.delete(d.id);return}
+      const data=d.data();st.srv.set(d.id,{j:SJ(strip(norm1(data))),o:data._o});
+      if(w&&started){const before=SJ(w.list);applyStudent(w,st,d.id,data);if(SJ(w.list)!==before)touched=true}
+    });
+    if(touched){const db=window.__db();if(window.__follow===id&&w&&w.list.length){window.__follow=null;db.wi=db.weeks.indexOf(w)}window.cloudRefresh()}
+  },err=>console.error("week",id,err));
+}
+function migrate(id,list){
+  /* 예전 방식(주차 문서 하나에 전체 목록) → 학생별 문서로 옮기기 */
+  const L=list.filter(x=>x&&x.id),ops=L.map((x,o)=>["set",F.doc(fs,"weeks",id,"s",x.id),{...strip(x),_o:o,_at:F.serverTimestamp(),_by:who()}]);
+  ops.push(["set",F.doc(fs,"weeks",id),{list:F.deleteField(),migratedAt:F.serverTimestamp()},{merge:true}]);
+  W[id].first=L.map((x,o)=>({id:x.id,data:{...x,_o:o}}));
+  L.forEach((x,o)=>W[id].srv.set(x.id,{j:SJ(strip(norm1(x))),o}));
+  commitOps(ops).catch(e=>console.error("migrate",e));
+}
+let metaReady=false,metaDocs=[],startT=null;
+function maybeStart(force){
+  if(started||!metaReady)return;
+  if(!force&&!metaDocs.every(m=>W[m.id]&&W[m.id].ready))return;
+  clearTimeout(startT);started=true;
+  const weeks=metaDocs.map(m=>{const st=W[m.id];
+    const list=(st.first||[]).slice().sort((a,b)=>(a.data._o??0)-(b.data._o??0)).map(f=>{const o=norm1(f.data);setO(o,f.data._o);
+      st.base.set(f.id,SJ(strip(o)));st.baseO.set(f.id,f.data._o);return o});
+    const w={list};setId(w,m.id);return w});
+  view(null);window.appStart(weeks);
+}
 async function listenWeeks(){
   await listenPresets();
-  let cacheT=null,cached=null;
-  const start=weeks=>{clearTimeout(cacheT);started=true;base=weeks.map(w=>normList(w.list));synced=base.map(l=>JSON.stringify(l));view(null);window.appStart(weeks.map(w=>({list:normList(w.list)})))};
+  startT=setTimeout(()=>{if(!started&&metaReady)maybeStart(true)},9000);
   unsubWeeks=F.onSnapshot(F.query(F.collection(fs,"weeks"),F.orderBy("i")),{includeMetadataChanges:true},snap=>{
+    if(snap.metadata.fromCache&&!metaReady)return;
     if(snap.metadata.hasPendingWrites)return;
-    const weeks=snap.docs.map(d=>({list:d.data().list||[]}));
-    if(!started){
-      /* 폰에 남아 있던 옛 사본으로 시작하지 않도록 서버 응답을 기다림 (인터넷이 없으면 6초 뒤 사본으로) */
-      if(snap.metadata.fromCache){cached=weeks;if(!cacheT)cacheT=setTimeout(()=>{if(!started&&cached)start(cached)},6000);return}
-      start(weeks);return}
-    if(snap.metadata.fromCache)return;
-    const R=weeks.map(w=>normList(w.list)),js=R.map(l=>JSON.stringify(l));
-    if(js.length===synced.length&&js.every((j,i)=>j===synced[i]))return;
-    const b=base;synced=js;base=R;window.cloudApply(weeks,b);
+    metaDocs=snap.docs.map(d=>({id:d.id,i:d.data().i,list:d.data().list}));
+    metaDocs.forEach(m=>{if(!W[m.id])W[m.id]={i:m.i,base:new Map(),baseO:new Map(),srv:new Map(),ready:false,first:[]};const st=W[m.id];st.i=m.i;
+      if(Array.isArray(m.list)&&m.list.length)st.legacy=m.list;subWeek(m.id)});
+    if(!metaReady){metaReady=true;maybeStart();return}
+    if(!started)return;
+    /* 다른 사람이 주차를 만들거나 지운 경우 */
+    const db=window.__db();if(!db)return;
+    const ids=new Set(metaDocs.map(m=>m.id));let changed=false;
+    const atLast=db.wi===db.weeks.length-1,curId=db.weeks[db.wi]?.id;
+    for(let k=db.weeks.length-1;k>=0;k--){const w=db.weeks[k];if(w.id&&W[w.id]&&W[w.id].ready&&!ids.has(w.id)){W[w.id].unsub&&W[w.id].unsub();delete W[w.id];db.weeks.splice(k,1);changed=true}}
+    metaDocs.forEach(m=>{if(!db.weeks.some(w=>w.id===m.id)){const st=W[m.id],w={list:[]};setId(w,m.id);db.weeks.push(w);changed=true;
+      if(st.ready)(st.first||[]).forEach(f=>applyStudent(w,st,f.id,f.data))}});
+    const before=db.weeks.map(w=>w.id).join();
+    db.weeks.sort((a,b)=>(W[a.id]?.i??1e9)-(W[b.id]?.i??1e9));
+    if(changed||before!==db.weeks.map(w=>w.id).join()){
+      if(!db.weeks.length){db.weeks.push({list:[]})}
+      let ni=db.weeks.findIndex(w=>w.id===curId);if(ni<0)ni=Math.min(db.wi,db.weeks.length-1);
+      if(atLast){const lw=db.weeks[db.weeks.length-1];if(lw.list.length)ni=db.weeks.length-1;else window.__follow=lw.id}
+      db.wi=ni;window.cloudRefresh();
+    }
   },err=>{view("gWait");$("gWaitTitle").textContent="데이터를 불러올 수 없어요";$("gWaitMsg").textContent=errMsg(err)});
 }
-function stopAll(){[unsubWeeks,unsubMe,unsubUsers,unsubPre].forEach(f=>f&&f());unsubWeeks=unsubMe=unsubUsers=unsubPre=null}
+function stopAll(){[unsubWeeks,unsubMe,unsubUsers,unsubPre].forEach(f=>f&&f());unsubWeeks=unsubMe=unsubUsers=unsubPre=null;window.__lw=0}
 
 A.onAuthStateChanged(auth,async u=>{
   stopAll();
