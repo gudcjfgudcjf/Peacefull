@@ -1148,7 +1148,7 @@ $("wNext").onclick=()=>{
   if(!nx.dataset.arm){nx.dataset.arm=1;nx.classList.add("arm");nx.textContent="새 주차 만들기?";clearTimeout(nx._t);nx._t=setTimeout(drawWeekNav,3000);return}
   const base=JSON.parse(JSON.stringify(db.list)).map(fill);fillBlankWeek(base);
   const list=base.map(advance);
-  db.weeks.push({list});gotoWeek(db.weeks.length-1);
+  db.weeks.push({list});window.__wkStruct=true;gotoWeek(db.weeks.length-1);
   toast(`${weekLabel(db.weeks[db.wi])}로 넘어갔어요 · 지난 주는 ◀로 볼 수 있어요`);
 };
 /* ---------- 주차 관리 ---------- */
@@ -1185,11 +1185,11 @@ $("wkList").addEventListener("click",e=>{
     if(db.weeks.length<2)return;
     if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="정말 삭제?";clearTimeout(b._t);b._t=setTimeout(()=>{b.classList.remove("arm");b.textContent="삭제"},3000);return}
     const snap=JSON.stringify(db.weeks[i].list),lbl=weekLabel(db.weeks[i]),id=cur()?.id;
-    db.weeks.splice(i,1);
+    db.weeks.splice(i,1);window.__wkStruct=true;
     if(db.wi>i||db.wi>=db.weeks.length)db.wi=Math.max(0,db.wi-1);
     if(!db.list.some(s=>s.id===id))db.cur=db.list[0]?.id;
     wkOpen=-1;save();buildEditor();drawWeekNav();drawWeeks();
-    toast(`${lbl} 삭제했어요`,"되돌리기",()=>{db.weeks.splice(i,0,{list:JSON.parse(snap).map(fill)});db.wi=i;save();buildEditor();drawWeekNav();if(!$("mWeeks").hidden)drawWeeks()});
+    toast(`${lbl} 삭제했어요`,"되돌리기",()=>{db.weeks.splice(i,0,{list:JSON.parse(snap).map(fill)});window.__wkStruct=true;db.wi=i;save();buildEditor();drawWeekNav();if(!$("mWeeks").hidden)drawWeeks()});
   }
 });
 $("bAll").onclick=()=>{
@@ -1245,7 +1245,7 @@ $("importFile").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{let nd;try{const d=JSON.parse(r.result);if(!d.list&&!d.weeks)throw 0;nd=initDb(d);if(!nd)throw 0}catch(err){toast("백업 파일 형식이 아니에요");return}
     const empty=db.weeks.every(w=>w.list.every(x=>!String(x.name||"").trim()));
-    if(empty){db=nd;save();buildEditor();drawWeekNav();toast(`${db.list.length}명 불러왔어요`);return}
+    if(empty){db=nd;window.__wkStruct=true;save();buildEditor();drawWeekNav();toast(`${db.list.length}명 불러왔어요`);return}
     /* 이미 학생이 있으면: 지금 보는 주차에 없는 이름만 추가 */
     const snap=JSON.stringify(db.weeks[db.wi].list),have=new Set(db.list.map(x=>norm(x.name)));let add=0,skip=0;
     nd.weeks[nd.weeks.length-1].list.forEach(x=>{if(!String(x.name||"").trim())return;if(have.has(norm(x.name))){skip++;return}x.id=uid();db.list.push(x);have.add(norm(x.name));add++});
@@ -1570,11 +1570,35 @@ else{
     db=initDb({cur:"",wi:Math.max(0,weeks.length-1),weeks:weeks.length?weeks:[{list:[fill({id:uid(),preset:"gis-dream",name:"새 학생",...todayWeek(),subjects:[]})]}]});
     db.cur=db.list[0]?.id;buildEditor();drawWeekNav();
   };
-  window.cloudApply=weeks=>{
-    if(saveT||!db)return;
-    const id=db.cur,wi=db.wi;
-    db.weeks=weeks.map(w=>({list:w.list.map(fill)}));db.wi=Math.min(wi,db.weeks.length-1);
+  /* 3-way merge: B=마지막으로 서버와 맞춘 목록, L=이 기기, R=서버. 학생 단위로 합쳐서 남의 수정을 덮어쓰지 않음 */
+  const J=x=>JSON.stringify(x);
+  window.merge3=(B,L,R)=>{
+    const Bo=new Map(B.map(x=>[x.id,x])),Bm=new Map(B.map(x=>[x.id,J(x)])),Lm=new Map(L.map(x=>[x.id,x])),Rids=new Set(R.map(x=>x.id)),out=[];
+    R.forEach(r=>{const l=Lm.get(r.id);
+      if(l){const bj=Bm.get(r.id),lj=J(l);
+        if(lj===bj)out.push(r);else if(J(r)===bj||!Bo.has(r.id))out.push(l);
+        else{const b=Bo.get(r.id),m={...r};Object.keys(l).forEach(k=>{if(J(l[k])!==J(b[k]))m[k]=l[k]});out.push(m)}}
+      else if(!Bm.has(r.id))out.push(r);});
+    L.forEach(l=>{if(Rids.has(l.id))return;
+      if(!Bm.has(l.id)||J(l)!==Bm.get(l.id))out.push(l);});
+    return out;
+  };
+  window.normList=list=>(list||[]).map(x=>fill(JSON.parse(J(x))));
+  window.cloudApply=(weeks,base,struct)=>{
+    if(!db)return;
+    const id=db.cur,wi=db.wi,atLast=wi===db.weeks.length-1,grew=weeks.length>db.weeks.length;
+    if(struct||!base||base.length!==db.weeks.length||weeks.length!==db.weeks.length){
+      if(window.__wkStruct)return;
+      db.weeks=weeks.map(w=>({list:normList(w.list)}));
+    }else{
+      db.weeks=weeks.map((w,i)=>({list:merge3(base[i],db.weeks[i].list,normList(w.list))}));
+    }
+    db.wi=Math.min(atLast&&grew?weeks.length-1:wi,db.weeks.length-1);
     db.cur=db.list.some(s=>s.id===id)?id:db.list[0]?.id;
+    cloudRefresh();
+  };
+  window.cloudRefresh=()=>{
+    if(!db.list.some(s=>s.id===db.cur))db.cur=db.list[0]?.id;
     const a=document.activeElement;const typing=a&&a.closest&&a.closest("#ed")&&/INPUT|TEXTAREA/.test(a.tagName);
     if(typing){buildStudents();draw()}else buildEditor();
     drawWeekNav();
@@ -1622,29 +1646,53 @@ window.cloudSignOut=()=>A.signOut(auth);
 
 /* 데이터 동기화: weeks/{w0001..} 문서 = 한 주차 */
 const wid=i=>"w"+String(i+1).padStart(4,"0");
-let synced=[],unsubWeeks=null,unsubMe=null,unsubUsers=null,unsubPre=null,started=false;
+let synced=[],base=[],unsubWeeks=null,unsubMe=null,unsubUsers=null,unsubPre=null,started=false;
 window.cloudSavePresets=o=>F.setDoc(F.doc(fs,"meta","presets"),{data:o,at:F.serverTimestamp(),by:auth.currentUser?.uid||""});
 function listenPresets(){return new Promise(res=>{let first=true;
   unsubPre=F.onSnapshot(F.doc(fs,"meta","presets"),d=>{const o=d.exists()?(d.data().data||{}):{};
     if(first){first=false;window.applyCustomPresets(o);window.buildPresetSelect&&buildPresetSelect();res()}
     else window.applyCustomPresetsRemote(o)},()=>{if(first){first=false;res()}})})}
+const who=()=>auth.currentUser?.email||"";
 window.cloudSave=async(db)=>{
-  const ws=db.weeks.map(w=>JSON.stringify(w.list));
-  const batch=F.writeBatch(fs);let n=0;
-  ws.forEach((j,i)=>{if(synced[i]!==j){batch.set(F.doc(fs,"weeks",wid(i)),{i,list:JSON.parse(j),at:F.serverTimestamp(),by:auth.currentUser?.email||""});n++}});
-  for(let i=ws.length;i<synced.length;i++){batch.delete(F.doc(fs,"weeks",wid(i)));n++}
-  if(!n)return true;
-  await batch.commit();synced=ws;return true;
+  if(window.__wkStruct||base.length!==db.weeks.length){
+    /* 주차 추가·삭제: 주차 구조 전체를 한 번에 저장 */
+    const ws=db.weeks.map(w=>JSON.stringify(w.list));
+    const batch=F.writeBatch(fs);
+    ws.forEach((j,i)=>batch.set(F.doc(fs,"weeks",wid(i)),{i,list:JSON.parse(j),at:F.serverTimestamp(),by:who()}));
+    for(let i=ws.length;i<synced.length;i++)batch.delete(F.doc(fs,"weeks",wid(i)));
+    await batch.commit();window.__wkStruct=false;synced=ws;base=ws.map(j=>JSON.parse(j));return true;
+  }
+  /* 평소 수정: 바뀐 학생만 서버 최신 내용 위에 합쳐서 저장 */
+  for(let i=0;i<db.weeks.length;i++){
+    const sent=JSON.parse(JSON.stringify(db.weeks[i].list));
+    if(JSON.stringify(sent)===JSON.stringify(base[i]))continue;
+    const ref=F.doc(fs,"weeks",wid(i)),b0=base[i];
+    const result=await F.runTransaction(fs,async tx=>{
+      const d=await tx.get(ref);const R=normList(d.exists()?d.data().list:[]);
+      const m=merge3(b0,sent,R);
+      tx.set(ref,{i,list:m,at:F.serverTimestamp(),by:who()});return m;
+    });
+    const now=db.weeks[i]?.list;
+    if(now){const merged=merge3(sent,now,result);if(JSON.stringify(merged)!==JSON.stringify(now)){db.weeks[i].list=merged;window.cloudRefresh&&cloudRefresh()}}
+    base[i]=result;synced[i]=JSON.stringify(result);
+  }
+  return true;
 };
 async function listenWeeks(){
   await listenPresets();
-  unsubWeeks=F.onSnapshot(F.query(F.collection(fs,"weeks"),F.orderBy("i")),snap=>{
-    const weeks=snap.docs.map(d=>({list:d.data().list||[]}));
+  let cacheT=null,cached=null;
+  const start=weeks=>{clearTimeout(cacheT);started=true;base=weeks.map(w=>normList(w.list));synced=base.map(l=>JSON.stringify(l));view(null);window.appStart(weeks.map(w=>({list:normList(w.list)})))};
+  unsubWeeks=F.onSnapshot(F.query(F.collection(fs,"weeks"),F.orderBy("i")),{includeMetadataChanges:true},snap=>{
     if(snap.metadata.hasPendingWrites)return;
-    const js=weeks.map(w=>JSON.stringify(w.list));
-    if(!started){started=true;synced=js;view(null);window.appStart(weeks);return}
+    const weeks=snap.docs.map(d=>({list:d.data().list||[]}));
+    if(!started){
+      /* 폰에 남아 있던 옛 사본으로 시작하지 않도록 서버 응답을 기다림 (인터넷이 없으면 6초 뒤 사본으로) */
+      if(snap.metadata.fromCache){cached=weeks;if(!cacheT)cacheT=setTimeout(()=>{if(!started&&cached)start(cached)},6000);return}
+      start(weeks);return}
+    if(snap.metadata.fromCache)return;
+    const R=weeks.map(w=>normList(w.list)),js=R.map(l=>JSON.stringify(l));
     if(js.length===synced.length&&js.every((j,i)=>j===synced[i]))return;
-    synced=js;window.cloudApply(weeks);
+    const b=base;synced=js;base=R;window.cloudApply(weeks,b);
   },err=>{view("gWait");$("gWaitTitle").textContent="데이터를 불러올 수 없어요";$("gWaitMsg").textContent=errMsg(err)});
 }
 function stopAll(){[unsubWeeks,unsubMe,unsubUsers,unsubPre].forEach(f=>f&&f());unsubWeeks=unsubMe=unsubUsers=unsubPre=null}
