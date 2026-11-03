@@ -336,10 +336,11 @@ button.wlbl:hover,button.wlbl:active{background:rgba(255,255,255,.1)}
 .rpt-a .dn{position:relative;width:172px;height:172px;margin:0 auto}
 .rpt-a .dn svg{display:block}
 .rpt-a .dn b{position:absolute;inset:0;display:grid;place-items:center;font-size:44px;font-weight:900;letter-spacing:-1px;color:#24201c}
+.rpt-a .dn b.lg{font-size:37px;letter-spacing:-1.5px}
 .rpt-a .donut p{margin:22px 0 0;font-size:16.5px;color:#5b544d}
 .rpt-a .bars{display:grid;gap:16px}
-.rpt-a .br{display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:12px}
-.rpt-a .br b{font-size:17.5px;font-weight:900;color:#2a2622}
+.rpt-a .br{display:grid;grid-template-columns:var(--bl,52px) 1fr auto;align-items:center;gap:12px}
+.rpt-a .br b{white-space:nowrap;font-size:17.5px;font-weight:900;color:#2a2622}
 .rpt-a .tr{height:18px;border-radius:9px;background:#eeeeee;overflow:hidden}
 .rpt-a .tr i{display:block;height:100%;border-radius:9px}
 .rpt-a .br span{font-size:15px;color:#4b443d;min-width:102px;text-align:right;font-variant-numeric:tabular-nums}
@@ -442,10 +443,13 @@ button.wlbl:hover,button.wlbl:active{background:rgba(255,255,255,.1)}
 .rpt-b .tb{overflow:hidden}
 .rpt-b .tb .r{display:grid;grid-template-columns:var(--tbw,84px) 1fr;border-top:1.5px solid #e6edf5}
 .rpt-b .tb .r:first-child{border-top:0}
-.rpt-b .tb .r b{background:#f4f7fb;color:#1f5aa6;font-size:16.5px;font-weight:900;padding:15px 16px}
-.rpt-b .tb .r span{padding:15px 16px;font-size:16px;color:#2c3848;line-height:1.5}
-.rpt-b .wr{display:grid;gap:12px;font-size:16px;color:#3a4656}
+.rpt-b .tb .r b{background:#f4f7fb;color:#1f5aa6;font-size:15.5px;font-weight:900;padding:13px 13px}
+.rpt-b .tb .r span{padding:13px 16px;font-size:15.5px;color:#2c3848;line-height:1.5}
+.rpt-b .wr{display:grid;gap:8px;font-size:16px;color:#3a4656}
 .rpt-b .wr b{color:#13294b;font-weight:900}
+.rpt-b .wr .wl{display:grid;grid-template-columns:var(--wrw) 1fr;line-height:1.5}
+.rpt-b .wr .wl .t{position:relative;padding-left:16px}
+.rpt-b .wr .wl .t.bu::before{content:"·";position:absolute;left:3px;top:0;font-weight:900}
 .rpt-b .np{margin-top:30px}
 .rpt-b .npr{display:grid;gap:14px}
 .rpt-b .npr+.npr{margin-top:14px}
@@ -872,6 +876,7 @@ function renderA(s,ed){
   const comp=Math.max(0,Math.min(100,has(s.completion)?num(s.completion):pct(cd,cp)));
   const total=has(s.total)?s.total:fmt(sumPlan);
   const R=73,Cc=2*Math.PI*R;
+  const bl=Math.max(52,...S.map(x=>Math.ceil([...(x.name||"")].reduce((a,c)=>a+(c===" "?6:17.5),0))));
   const src=logoSrc(s);
   const hrs=S.map((x,i)=>{const pc=has(x.hPct)?num(x.hPct):pct(num(x.hDone),num(x.hPlan));const w=Math.min(100,pct(num(x.hDone),num(x.hPlan)));
     return `<div class="br">${RM("subj",i)}<b${F(i)}>${esc(x.name)}</b><div class="tr"><i style="width:${w}%;background:${esc(x.color)}"></i></div><span>${EV(`s.${i}.hDone`,fmt(num(x.hDone)),.5)}/${EV(`s.${i}.hPlan`,fmt(num(x.hPlan)),.5)}시간${s.showPct?` (${pc}%)`:""}</span></div>`}).join("");
@@ -893,10 +898,10 @@ function renderA(s,ed){
   <div class="cards">
     <div class="cd donut"><h4>과제 완료율</h4>
       <div class="dn"><svg width="172" height="172" viewBox="0 0 172 172"><circle cx="86" cy="86" r="${R}" fill="none" stroke="#ede5dc" stroke-width="26"/>
-      ${comp>0?`<circle cx="86" cy="86" r="${R}" fill="none" stroke="#c56a2d" stroke-width="26" stroke-dasharray="${(Cc*comp/100).toFixed(2)} ${Cc.toFixed(2)}" transform="rotate(-90 86 86)"/>`:""}</svg><b>${EV("completion",fmt(comp)+"%",5)}</b></div>
+      ${comp>0?`<circle cx="86" cy="86" r="${R}" fill="none" stroke="#c56a2d" stroke-width="26" stroke-dasharray="${(Cc*comp/100).toFixed(2)} ${Cc.toFixed(2)}" transform="rotate(-90 86 86)"/>`:""}</svg><b${comp>=100?' class="lg"':""}>${EV("completion",fmt(comp)+"%",5)}</b></div>
       <p>주간 총 ${EV("total",esc(total),.5)}시간</p></div>
-    <div class="cd"><h4>과목별 주간 학습 시간</h4><div class="bars">${hrs}</div>${ADD("subj")}</div>
-    <div class="cd cnt"><h4>이번 주 공부 횟수</h4><div class="bars">${cnt}</div>${ADD("subj")}</div>
+    <div class="cd"><h4>과목별 주간 학습 시간</h4><div class="bars" style="--bl:${bl}px">${hrs}</div>${ADD("subj")}</div>
+    <div class="cd cnt"><h4>이번 주 공부 횟수</h4><div class="bars" style="--bl:${bl}px">${cnt}</div>${ADD("subj")}</div>
   </div>
   ${cm||ed?`<div class="cmt"><h4>이번 주 학습 코멘트</h4><ul>${cm}</ul>${ADD("cmt")}</div>`:""}
   <div class="two">
@@ -923,7 +928,9 @@ function renderB(s,ed){
   const fl=lines(s.feeling);
   const nexts=S.map((x,i)=>({x,i})).filter(o=>o.x.next);
   const splitRows=a=>{const n=a.length;if(n<=3)return[a];if(n<=5)return[a.slice(0,2),a.slice(2)];return[a.slice(0,3),a.slice(3)]};
-  const wrong=lines(s.wrong).map((l,i)=>{const m=l.match(/^(.+?)\s*[·:]\s*(.*)$/);return `<div>${RM("wrong",i)}${TX("line.wrong."+i,m?`<b>${esc(m[1])}</b> · ${esc(m[2])}`:esc(l))}</div>`}).join("");
+  const WL=lines(s.wrong).map(l=>{const m=l.match(/^(\S{1,6})\s*[·:]\s*(.*)$/);return m?{b:m[1],t:m[2]}:{b:"",t:l}});
+  const wrw=Math.max(0,...WL.map(o=>[...o.b].length*16+10));
+  const wrong=WL.map((o,i)=>`<div>${RM("wrong",i)}${TX("line.wrong."+i,`<span class="wl" style="--wrw:${wrw}px"><b>${esc(o.b)}</b><span class="t${o.b?" bu":""}">${esc(o.t)}</span></span>`)}</div>`).join("");
   const logo=p.logo==="iec"&&!s.logo?`<div class="logo iec">${esc(s.orgTitle)}</div>`:`<div class="logo"><img src="${src}" alt=""></div>`;
   return `<div class="rpt rpt-b">
   <div class="hd">${logo}
@@ -951,7 +958,7 @@ function renderB(s,ed){
         ${fl.length||ed?`<hr><p>${TX("f.feeling",`<b>한 주 소감 :</b> ${fl.map(esc).join("<br>")}`)}</p>`:""}</div></div>
       <div class="box tc"><div class="hd2"><b>과목별 과제 완료율</b><span>전 과목 ${fmt(kpiTask)}%</span></div>
         <div class="tk">${S.map((x,i)=>`<div class="r">${RM("subj",i)}<span${F(i)}>${esc(full(x))}</span><div class="tr"><i style="width:${Math.min(100,num(x.task))}%"></i></div><b>${EV(`s.${i}.task`,fmt(num(x.task))+"%",5)}</b></div>`).join("")}</div>${ADD("subj")}</div>
-      <div><div class="sh">일주일 공부 분량</div><div class="box tb" style="--tbw:${Math.max(84,...S.map(x=>[...(x.name||"")].length*17+36))}px">${S.map((x,i)=>`<div class="r">${RM("subj",i)}<b${F(i)}>${esc(x.name)}</b><span>${TX("amount."+i,esc(x.amount||"없음"))}</span></div>`).join("")}</div>${ADD("subj")}</div>
+      <div><div class="sh">일주일 공부 분량</div><div class="box tb" style="--tbw:${Math.max(84,...S.map(x=>[...(x.name||"")].length*15+26))}px">${S.map((x,i)=>`<div class="r">${RM("subj",i)}<b${F(i)}>${esc(x.name)}</b><span>${TX("amount."+i,esc(x.amount||"없음"))}</span></div>`).join("")}</div>${ADD("subj")}</div>
       ${wrong||ed?`<div><div class="sh">오답 유형 분석</div><div class="wr">${wrong}</div>${ADD("wrong")}</div>`:""}
     </div>
   </div>
@@ -964,7 +971,7 @@ const renderReport=(s,ed)=>P(s.preset).tpl==="A"?renderA(s,ed):renderB(s,ed);
 
 /* ---------- 미리보기 맞춤 ---------- */
 function fit(){
-  const pv=$("pv"),st=$("stage"),w=$("stagewrap");
+  const pv=$("pv"),st=$("stage"),w=$("stagewrap");eqBars(st);
   const r=st.firstElementChild;if(!r)return;
   const pad=window.innerWidth<=860?24:48;
   const avail=Math.max(200,pv.clientWidth-pad);
@@ -973,9 +980,11 @@ function fit(){
   w.style.width=1100*sc+"px";w.style.height=r.offsetHeight*sc+"px";
 }
 let rq;
-function draw(){cancelAnimationFrame(rq);rq=requestAnimationFrame(()=>{const c=cur();$("stage").innerHTML=c?renderReport(c,true):"";fit()})}
+/* 템플릿 A: 막대 길이가 숫자 글자 수에 따라 달라지지 않게 숫자 칸 너비를 맞춤 */
+function eqBars(root){root.querySelectorAll(".rpt-a .bars").forEach(b=>{if(!b.offsetWidth)return;const sp=[...b.querySelectorAll(".br>span")];sp.forEach(x=>x.style.minWidth="");const m=Math.max(0,...sp.map(x=>x.getBoundingClientRect().width));const sc=b.getBoundingClientRect().width/(b.offsetWidth||1)||1;sp.forEach(x=>x.style.minWidth=Math.ceil(m/sc)+"px")})}
+function draw(){cancelAnimationFrame(rq);rq=requestAnimationFrame(()=>{const c=cur();$("stage").innerHTML=c?renderReport(c,true):"";eqBars($("stage"));fit()})}
 window.addEventListener("resize",fit);
-if(document.fonts)document.fonts.ready.then(fit);
+if(document.fonts)document.fonts.ready.then(()=>{eqBars($("stage"));fit()});
 
 /* ---------- 편집기 ---------- */
 function buildPresetSelect(){
@@ -1226,6 +1235,10 @@ async function capture(s){
   h.innerHTML=renderReport(s);document.body.appendChild(h);
   if(document.fonts)await document.fonts.ready;
   await Promise.all([...h.querySelectorAll("img")].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
+  eqBars(h);
+  /* 이미지로 바꿀 때 "·" 옆 띄어쓰기가 사라지지 않게 */
+  const tw=document.createTreeWalker(h,NodeFilter.SHOW_TEXT),TN=[];for(let n;(n=tw.nextNode());)if(/ ·|· /.test(n.nodeValue))TN.push(n);
+  TN.forEach(n=>{const f=document.createElement("span");n.nodeValue.split(/(\s*·\s*)/).forEach(part=>{if(/·/.test(part)&&/\s/.test(part)){const d=document.createElement("span");d.style.cssText="display:inline-block;width:.2em;min-width:0;max-width:.2em;padding:0;height:.2em;border-radius:50%;background:currentColor;vertical-align:.28em;margin:0 .36em";f.appendChild(d)}else if(part)f.appendChild(document.createTextNode(part))});n.replaceWith(f)});
   const el=h.firstElementChild;
   const bg=getComputedStyle(el).backgroundColor;
   const cv=await html2canvas(el,{scale:2,backgroundColor:bg,useCORS:true,logging:false,windowWidth:1200});
@@ -1254,7 +1267,7 @@ $("bPngAll").onclick=e=>busy(e.currentTarget,async()=>{
   for(const s of db.list){toast(`${s.name} 저장 중…`);dl(await toBlob(await capture(s)),fname(s));await new Promise(r=>setTimeout(r,500))}
   toast(`${db.list.length}명 저장 완료`);
 });
-$("bPrint").onclick=()=>{$("printArea").innerHTML=renderReport(cur());setTimeout(()=>window.print(),200)};
+$("bPrint").onclick=()=>{$("printArea").innerHTML=renderReport(cur());eqBars($("printArea"));setTimeout(()=>window.print(),200)};
 $("bExport").onclick=()=>{dl(new Blob([JSON.stringify(db,null,1)],{type:"application/json"}),`주간리포트_백업_${new Date().toISOString().slice(0,10)}.json`)};
 $("importFile").addEventListener("change",e=>{
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
