@@ -833,10 +833,14 @@ const CLOUD=!!window.FIREBASE_CONFIG;
 if(CLOUD){db=null}else{db=initDb(db)||initDb({cur:"s1",list:seed()})}
 const cur=()=>db.list.find(s=>s.id===db.cur)||db.list[0];
 let saveT;
-function save(){clearTimeout(saveT);$("saved").textContent="저장 중…";
-  saveT=setTimeout(async()=>{saveT=null;
+async function doSave(){saveT=null;if(!db)return;
     if(CLOUD){try{await window.cloudSave(db);$("saved").textContent="저장됨 · 공유 중"}catch(e){console.error(e);$("saved").textContent="저장 실패 · 다시 시도"+(e&&e.code?` (${e.code})`:"");setTimeout(save,4000)}return}
-    try{localStorage.setItem(KEY,JSON.stringify(db));$("saved").textContent="자동 저장됨"}catch(e){$("saved").textContent="저장 실패(용량)"}},CLOUD?700:300)}
+    try{localStorage.setItem(KEY,JSON.stringify(db));$("saved").textContent="자동 저장됨"}catch(e){$("saved").textContent="저장 실패(용량)"}}
+function save(){clearTimeout(saveT);$("saved").textContent="저장 중…";saveT=setTimeout(doSave,CLOUD?700:300)}
+/* 앱을 내리거나 화면을 끄기 직전에 쓴 내용도 바로 저장 */
+const flushSave=()=>{if(saveT){clearTimeout(saveT);doSave()}};
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flushSave()});
+addEventListener("pagehide",flushSave);
 
 /* ---------- 유틸 ---------- */
 const $=id=>document.getElementById(id);
@@ -1686,7 +1690,7 @@ window.cloudSave=async db=>{
   if(!ops.length)return true;
   const slow=setTimeout(()=>{$("saved").textContent="연결 기다리는 중 · 폰에 보관됨"},6000);
   try{await commitOps(ops)}
-  catch(e){Object.values(W).forEach(st=>{st.base=new Map([...st.srv].map(([k,v])=>[k,v.j]));st.baseO=new Map([...st.srv].map(([k,v])=>[k,v.o]))});throw e}
+  catch(e){Object.values(W).forEach(st=>{st.i=null;st.base=new Map([...st.srv].map(([k,v])=>[k,v.j]));st.baseO=new Map([...st.srv].map(([k,v])=>[k,v.o]))});throw e}
   finally{clearTimeout(slow)}
   return true;
 };
@@ -1710,14 +1714,8 @@ function subWeek(id){
   const st=W[id];if(st.unsub)return;
   st.srv=st.srv||new Map();st.first=st.first||[];
   st.unsub=F.onSnapshot(F.collection(fs,"weeks",id,"s"),{includeMetadataChanges:true},snap=>{
-    if(snap.metadata.fromCache&&!st.ready)return;
-    if(!st.ready){st.ready=true;
-      st.first=snap.docs.map(d=>({id:d.id,data:d.data()}));
-      snap.docs.forEach(d=>st.srv.set(d.id,{j:SJ(strip(norm1(d.data()))),o:d.data()._o}));
-      if(!snap.size&&st.legacy)migrate(id,st.legacy);
-      if(started){const w=localWeek(id);if(w){st.first.forEach(f=>applyStudent(w,st,f.id,f.data));
-        const db=window.__db();if(window.__follow===id&&w.list.length){window.__follow=null;db.wi=db.weeks.indexOf(w)}window.cloudRefresh()}}
-      maybeStart();return}
+    if(snap.metadata.fromCache&&!st.ready){st.cache=snap;return}
+    if(!st.ready){readyFrom(id,snap);return}
     const w=localWeek(id);let touched=false;
     snap.docChanges({includeMetadataChanges:true}).forEach(c=>{
       const d=c.doc;if(d.metadata.hasPendingWrites)return;
@@ -1730,6 +1728,15 @@ function subWeek(id){
     });
     if(touched){const db=window.__db();if(window.__follow===id&&w&&w.list.length){window.__follow=null;db.wi=db.weeks.indexOf(w)}window.cloudRefresh()}
   },err=>console.error("week",id,err));
+}
+function readyFrom(id,snap){
+  const st=W[id];if(!st||st.ready)return;st.ready=true;st.cache=null;
+  st.first=snap.docs.map(d=>({id:d.id,data:d.data()}));
+  snap.docs.forEach(d=>st.srv.set(d.id,{j:SJ(strip(norm1(d.data()))),o:d.data()._o}));
+  if(!snap.size&&st.legacy&&!snap.metadata.fromCache)migrate(id,st.legacy);
+  if(started){const w=localWeek(id);if(w){st.first.forEach(f=>applyStudent(w,st,f.id,f.data));
+    const db=window.__db();if(window.__follow===id&&w.list.length){window.__follow=null;db.wi=db.weeks.indexOf(w)}window.cloudRefresh()}}
+  maybeStart();
 }
 function migrate(id,list){
   /* 예전 방식(주차 문서 하나에 전체 목록) → 학생별 문서로 옮기기 */
@@ -1752,13 +1759,20 @@ function maybeStart(force){
 }
 async function listenWeeks(){
   await listenPresets();
-  startT=setTimeout(()=>{if(!started&&metaReady)maybeStart(true)},9000);
-  unsubWeeks=F.onSnapshot(F.query(F.collection(fs,"weeks"),F.orderBy("i")),{includeMetadataChanges:true},snap=>{
-    if(snap.metadata.fromCache&&!metaReady)return;
-    if(snap.metadata.hasPendingWrites)return;
+  /* 인터넷이 느리거나 없으면 폰에 보관된 마지막 내용으로 먼저 열기 */
+  let haveCache=false,onMeta;
+  startT=setTimeout(()=>{if(started)return;
+    if(!metaReady&&haveCache)metaReady=true;
+    Object.keys(W).forEach(id=>{const st=W[id];if(!st.ready&&st.cache)readyFrom(id,st.cache)});
+    if(metaReady)maybeStart(true)},6000);
+  unsubWeeks=F.onSnapshot(F.query(F.collection(fs,"weeks"),F.orderBy("i")),{includeMetadataChanges:true},snap=>onMeta(snap),err=>{if(started)return;view("gWait");$("gWaitTitle").textContent="데이터를 불러올 수 없어요";$("gWaitMsg").textContent=errMsg(err)});
+  onMeta=snap=>{
+    const early=snap.metadata.fromCache&&!metaReady;
+    if(snap.metadata.hasPendingWrites&&!early)return;
     metaDocs=snap.docs.map(d=>({id:d.id,i:d.data().i,list:d.data().list}));
     metaDocs.forEach(m=>{if(!W[m.id])W[m.id]={i:m.i,base:new Map(),baseO:new Map(),srv:new Map(),ready:false,first:[]};const st=W[m.id];st.i=m.i;
       if(Array.isArray(m.list)&&m.list.length)st.legacy=m.list;subWeek(m.id)});
+    if(early){haveCache=true;return}
     if(!metaReady){metaReady=true;maybeStart();return}
     if(!started)return;
     /* 다른 사람이 주차를 만들거나 지운 경우 */
@@ -1776,7 +1790,7 @@ async function listenWeeks(){
       if(atLast){const lw=db.weeks[db.weeks.length-1];if(lw.list.length)ni=db.weeks.length-1;else window.__follow=lw.id}
       db.wi=ni;window.cloudRefresh();
     }
-  },err=>{view("gWait");$("gWaitTitle").textContent="데이터를 불러올 수 없어요";$("gWaitMsg").textContent=errMsg(err)});
+  };
 }
 function stopAll(){[unsubWeeks,unsubMe,unsubUsers,unsubPre].forEach(f=>f&&f());unsubWeeks=unsubMe=unsubUsers=unsubPre=null;window.__lw=0}
 
